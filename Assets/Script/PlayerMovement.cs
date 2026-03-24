@@ -9,22 +9,25 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private Animator animator;
 
     [Header("Settings")]
-    [SerializeField] private float rotationSpeed = 20f;
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float gravity = -20f; // Trọng lực mạnh cho cảm giác chắc chắn
+    [SerializeField] private float rotationSpeed = 15f;
+    [SerializeField] private float moveSpeed = 4.5f;
+    [SerializeField] private float sprintSpeed = 10f;
+    [SerializeField] private float jumpForce = 8f;       // Độ cao khi nhảy
+    [SerializeField] private float gravity = -20f;
 
     private Vector2 moveInput;
+    private bool isSprinting; 
+    private bool jumpRequested; // Biến tạm để ghi nhận lệnh nhảy
     private Transform mainCameraTransform;
     private float _verticalVelocity;
 
-    // Biến này được đồng bộ qua mạng để mọi người đều thấy animation của nhau
     [Networked] public float networkedSpeed { get; set; }
+    [Networked] public bool isGroundedNetworked { get; set; } // Đồng bộ trạng thái chạm đất
 
     public override void Spawned()
     {
         if (HasInputAuthority)
         {
-            // Đảm bảo lấy được Camera ngay khi Spawn
             if (Camera.main != null) mainCameraTransform = Camera.main.transform;
 
             ThirdPersonCamera camScript = FindFirstObjectByType<ThirdPersonCamera>();
@@ -38,12 +41,11 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        // CHỈ máy sở hữu mới tính toán di chuyển vật lý
         if (HasInputAuthority)
         {
             Vector3 move = Vector3.zero;
 
-            // 1. Tính hướng di chuyển theo Camera (Roblox Style)
+            // 1. Tính hướng di chuyển
             if (moveInput != Vector2.zero && mainCameraTransform != null)
             {
                 Vector3 forward = mainCameraTransform.forward;
@@ -52,53 +54,80 @@ public class PlayerMovement : NetworkBehaviour
                 right.y = 0;
                 forward.Normalize();
                 right.Normalize();
-
                 move = (forward * moveInput.y + right * moveInput.x).normalized;
             }
 
-            // 2. Xử lý Trọng lực
+            // 2. Tốc độ tức thời
+            float currentSpeed = 0;
+            float animValue = 0;
+
+            if (moveInput != Vector2.zero)
+            {
+                currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
+                animValue = isSprinting ? 1.0f : 0.5f;
+            }
+
+            // 3. XỬ LÝ NHẢY VÀ TRỌNG LỰC
             if (character.isGrounded)
             {
+                // Khi chạm đất, reset vận tốc Y nhưng giữ một chút lực hút xuống để check grounded chuẩn
                 if (_verticalVelocity < 0) _verticalVelocity = -2f;
+
+                // Thực hiện nhảy nếu có yêu cầu
+                if (jumpRequested)
+                {
+                    _verticalVelocity = jumpForce;
+                    jumpRequested = false; // Reset ngay sau khi nhảy
+                    // Nếu bạn có Animation nhảy, hãy trigger ở đây:
+                    // animator.SetTrigger("Jump"); 
+                }
             }
             else
             {
+                // Áp dụng trọng lực khi đang rơi
                 _verticalVelocity += gravity * Runner.DeltaTime;
+                jumpRequested = false; // Không cho phép nhảy khi đang ở trên không
             }
 
-            // 3. Thực hiện di chuyển
-            Vector3 finalMove = (move * moveSpeed);
+            // 4. Thực hiện di chuyển
+            Vector3 finalMove = (move * currentSpeed);
             finalMove.y = _verticalVelocity;
             character.Move(finalMove * Runner.DeltaTime);
 
-            // 4. Xoay mặt nhân vật
+            // 5. Xoay mặt
             if (move != Vector3.zero)
             {
                 Quaternion targetRotation = Quaternion.LookRotation(move);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Runner.DeltaTime * rotationSpeed);
             }
 
-            // Cập nhật giá trị mạng để truyền đi cho các máy khác
-            networkedSpeed = moveInput.magnitude;
+            // 6. Đồng bộ trạng thái cho máy khác
+            networkedSpeed = animValue;
+            isGroundedNetworked = character.isGrounded;
         }
     }
 
     public override void Render()
     {
-        // Hàm này chạy trên TẤT CẢ các máy (máy mình và máy bạn bè)
-        // Dùng giá trị networkedSpeed đã đồng bộ để chạy Animation
         if (animator != null)
         {
             animator.SetFloat("Speed", networkedSpeed);
+            // Đồng bộ trạng thái trên không để chạy animation rơi/tiếp đất
+            animator.SetBool("IsGrounded", isGroundedNetworked);
         }
     }
 
-    public void OnMove(InputValue value)
+    // --- INPUT SYSTEM EVENTS ---
+
+    public void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
+    public void OnSprint(InputValue value) => isSprinting = value.isPressed;
+    
+    // Hàm mới cho phím Space
+    public void OnJump(InputValue value)
     {
-        if (HasInputAuthority)
+        if (HasInputAuthority && value.isPressed)
         {
-            moveInput = value.Get<Vector2>();
+            jumpRequested = true;
         }
     }
-    public void OnFootstep(AnimationEvent animationEvent) { }
 }
