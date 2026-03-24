@@ -7,7 +7,7 @@ public class PlayerRunner : SimulationBehaviour, IPlayerJoined
     
     [Header("Spawn Settings")]
     [Tooltip("Độ cao cố định khi nhân vật xuất hiện")]
-    [SerializeField] private float spawnHeightY = 1.0f; 
+    [SerializeField] private float spawnHeightY = 10f; 
     
     [SerializeField] private float minRange = -2f;
     [SerializeField] private float maxRange = 10f;
