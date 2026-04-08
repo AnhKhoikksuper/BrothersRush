@@ -1507,10 +1507,14 @@ MonoBehaviour:
   rotationSpeed: 12
   moveSpeed: 4.5
   sprintSpeed: 10
+  acceleration: 10
+  deceleration: 10
+  airControl: 0.2
   jumpHeight: 2
   gravity: -20
   maxFallSpeed: -50
-  jumpHeightThreshold: 0.5
+  jumpForwardBoost: 2
+  jumpHeightThreshold: 0.6
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
