@@ -1507,8 +1507,17 @@ MonoBehaviour:
   rotationSpeed: 12
   moveSpeed: 4.5
   sprintSpeed: 10
+  jumpHeight: 2
   gravity: -20
+  maxFallSpeed: -50
+  jumpHeightThreshold: 0.5
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 64
   _networkedSpeed: 0
+  _isGroundedNetworked: 0
+  _isInMidAirAnim: 0
+  _currentDistToGround: 0
 --- !u!1 &7911766947805947312
 GameObject:
   m_ObjectHideFlags: 0

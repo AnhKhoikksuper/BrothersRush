@@ -2,6 +2,7 @@ using Fusion;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : NetworkBehaviour
 {
     [Header("Components")]
@@ -12,120 +13,201 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private float rotationSpeed = 15f;
     [SerializeField] private float moveSpeed = 4.5f;
     [SerializeField] private float sprintSpeed = 10f;
-    [SerializeField] private float jumpForce = 8f;       // Độ cao khi nhảy
+
+    [Header("Jump & Gravity")]
+    [SerializeField] private float jumpHeight = 2f;
     [SerializeField] private float gravity = -20f;
+    [SerializeField] private float maxFallSpeed = -50f;
+    
+    [Tooltip("Độ cao rơi/nhảy tối thiểu để kích hoạt hoạt ảnh (giúp tránh giật khi đi cầu thang)")]
+    public float jumpHeightThreshold = 0.3f;
+
+    [Header("Ground Detection")]
+    [SerializeField] private LayerMask groundLayer;
 
     private Vector2 moveInput;
-    private bool isSprinting; 
-    private bool jumpRequested; // Biến tạm để ghi nhận lệnh nhảy
+    private bool isSprinting;
+    private bool jumpRequested;
     private Transform mainCameraTransform;
-    private float _verticalVelocity;
 
+    // --- NETWORKED PROPERTIES ---
+    [Networked] private float _verticalVelocity { get; set; }
     [Networked] public float networkedSpeed { get; set; }
-    [Networked] public bool isGroundedNetworked { get; set; } // Đồng bộ trạng thái chạm đất
+    [Networked] public bool isGroundedNetworked { get; set; }
+    [Networked] private float _lastGroundedY { get; set; }
+    [Networked] public bool isInMidAirAnim { get; set; }
+    
+    [Header("Debug Info")]
+    [Networked] public float currentDistToGround { get; set; } // Quan sát khoảng cách đất trong Inspector
 
     public override void Spawned()
     {
         if (HasInputAuthority)
         {
-            if (Camera.main != null) mainCameraTransform = Camera.main.transform;
+            TryAssignCamera();
 
             ThirdPersonCamera camScript = FindFirstObjectByType<ThirdPersonCamera>();
             if (camScript != null)
             {
-                Transform myTarget = transform.Find("CameraTarget");
-                camScript.SetTarget(myTarget != null ? myTarget : this.transform);
+                Transform target = transform.Find("CameraTarget");
+                camScript.SetTarget(target != null ? target : transform);
             }
         }
     }
 
     public override void FixedUpdateNetwork()
     {
-        if (HasInputAuthority)
+        // Chỉ xử lý logic di chuyển phía người chơi có quyền điều khiển
+        if (!HasInputAuthority) return;
+
+        TryAssignCamera();
+
+        // 1. Tính hướng di chuyển
+        Vector3 moveDirection = CalculateMoveDirection();
+
+        // 2. Tính tốc độ và giá trị Animation
+        float currentSpeed = 0f;
+        float animValue = 0f;
+
+        if (moveInput != Vector2.zero)
         {
-            Vector3 move = Vector3.zero;
+            currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
+            animValue = isSprinting ? 1f : 0.5f;
+        }
 
-            // 1. Tính hướng di chuyển
-            if (moveInput != Vector2.zero && mainCameraTransform != null)
+        // 3. Xử lý Trọng lực, Nhảy và đo khoảng cách đất
+        HandleGravityAndJumping();
+
+        // 4. Thực hiện di chuyển vật lý
+        Vector3 velocity = moveDirection * currentSpeed;
+        velocity.y = _verticalVelocity;
+
+        character.Move(velocity * Runner.DeltaTime);
+
+        // 5. Xoay nhân vật theo hướng di chuyển
+        if (moveDirection != Vector3.zero)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(moveDirection);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRot,
+                Runner.DeltaTime * rotationSpeed
+            );
+        }
+
+        // 6. Đồng bộ hóa trạng thái cho toàn mạng
+        networkedSpeed = animValue;
+        
+        // CẬP NHẬT QUAN TRỌNG: 
+        // Grounded chỉ bằng true khi vật lý báo chạm đất VÀ logic không xác nhận đang bay (MidAir)
+        isGroundedNetworked = character.isGrounded && !isInMidAirAnim;
+        Debug.Log("Do cao hien tai:" + currentDistToGround);
+    }
+
+    private void TryAssignCamera()
+    {
+        if (mainCameraTransform == null && Camera.main != null)
+        {
+            mainCameraTransform = Camera.main.transform;
+        }
+    }
+
+    private Vector3 CalculateMoveDirection()
+    {
+        if (moveInput == Vector2.zero || mainCameraTransform == null)
+            return Vector3.zero;
+
+        Vector3 forward = mainCameraTransform.forward;
+        Vector3 right = mainCameraTransform.right;
+
+        forward.y = 0;
+        right.y = 0;
+
+        forward.Normalize();
+        right.Normalize();
+
+        return (forward * moveInput.y + right * moveInput.x).normalized;
+    }
+
+    private void HandleGravityAndJumping()
+    {
+        // ĐO KHOẢNG CÁCH ĐẤT THỰC TẾ (Raycast)
+        // Bắn tia từ chân nhân vật xuống dưới
+        if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out RaycastHit hit, 20f, groundLayer))
+        {
+            currentDistToGround = hit.distance - 0.1f;
+        }
+        else
+        {
+            currentDistToGround = 99f;
+        }
+
+        if (character.isGrounded)
+        {
+            // Reset vận tốc rơi nhưng giữ lực hút nhẹ để bám dốc
+            if (_verticalVelocity < 0)
+                _verticalVelocity = -2f;
+
+            _lastGroundedY = transform.position.y;
+            
+            // Khi thực sự chạm đất bền vững, tắt trạng thái InAir
+            isInMidAirAnim = false;
+
+            if (jumpRequested)
             {
-                Vector3 forward = mainCameraTransform.forward;
-                Vector3 right = mainCameraTransform.right;
-                forward.y = 0;
-                right.y = 0;
-                forward.Normalize();
-                right.Normalize();
-                move = (forward * moveInput.y + right * moveInput.x).normalized;
+                // Công thức nhảy: v = sqrt(h * -2 * g)
+                _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                jumpRequested = false;
+                
+                // Nhảy chủ động -> Bật hoạt ảnh ngay lập tức
+                isInMidAirAnim = true; 
             }
+        }
+        else
+        {
+            // Áp dụng trọng lực khi rơi
+            _verticalVelocity += gravity * Runner.DeltaTime;
 
-            // 2. Tốc độ tức thời
-            float currentSpeed = 0;
-            float animValue = 0;
+            if (_verticalVelocity < maxFallSpeed)
+                _verticalVelocity = maxFallSpeed;
 
-            if (moveInput != Vector2.zero)
+            jumpRequested = false;
+
+            // KIỂM TRA ĐỘ CAO SO VỚI ĐIỂM RỜI ĐẤT
+            float fallDistance = _lastGroundedY - transform.position.y;
+            float jumpDistance = transform.position.y - _lastGroundedY;
+
+            // Nếu vượt ngưỡng quy định (ví dụ 0.3m) thì mới xác nhận là đang nhảy/rơi thực sự
+            if (jumpDistance > jumpHeightThreshold || fallDistance > jumpHeightThreshold)
             {
-                currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
-                animValue = isSprinting ? 1.0f : 0.5f;
+                isInMidAirAnim = true;
             }
-
-            // 3. XỬ LÝ NHẢY VÀ TRỌNG LỰC
-            if (character.isGrounded)
-            {
-                // Khi chạm đất, reset vận tốc Y nhưng giữ một chút lực hút xuống để check grounded chuẩn
-                if (_verticalVelocity < 0) _verticalVelocity = -2f;
-
-                // Thực hiện nhảy nếu có yêu cầu
-                if (jumpRequested)
-                {
-                    _verticalVelocity = jumpForce;
-                    jumpRequested = false; // Reset ngay sau khi nhảy
-                    // Nếu bạn có Animation nhảy, hãy trigger ở đây:
-                    // animator.SetTrigger("Jump"); 
-                }
-            }
-            else
-            {
-                // Áp dụng trọng lực khi đang rơi
-                _verticalVelocity += gravity * Runner.DeltaTime;
-                jumpRequested = false; // Không cho phép nhảy khi đang ở trên không
-            }
-
-            // 4. Thực hiện di chuyển
-            Vector3 finalMove = (move * currentSpeed);
-            finalMove.y = _verticalVelocity;
-            character.Move(finalMove * Runner.DeltaTime);
-
-            // 5. Xoay mặt
-            if (move != Vector3.zero)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(move);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Runner.DeltaTime * rotationSpeed);
-            }
-
-            // 6. Đồng bộ trạng thái cho máy khác
-            networkedSpeed = animValue;
-            isGroundedNetworked = character.isGrounded;
         }
     }
 
     public override void Render()
     {
+        // Cập nhật Animator trên tất cả các máy dựa trên dữ liệu đã đồng bộ
         if (animator != null)
         {
             animator.SetFloat("Speed", networkedSpeed);
-            // Đồng bộ trạng thái trên không để chạy animation rơi/tiếp đất
+            
+            // Sử dụng biến đã qua bộ lọc "Cầu thang" để tránh giật hình
             animator.SetBool("IsGrounded", isGroundedNetworked);
+            
+            // Nếu animator của bạn cần biến InAir riêng:
+            animator.SetBool("InAir", isInMidAirAnim);
         }
     }
 
     // --- INPUT SYSTEM EVENTS ---
-
     public void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
     public void OnSprint(InputValue value) => isSprinting = value.isPressed;
-    
-    // Hàm mới cho phím Space
+
     public void OnJump(InputValue value)
     {
-        if (HasInputAuthority && value.isPressed)
+        // Chỉ nhận lệnh nhảy khi phím được nhấn và nhân vật đang đứng trên đất
+        if (value.isPressed && character.isGrounded)
         {
             jumpRequested = true;
         }
