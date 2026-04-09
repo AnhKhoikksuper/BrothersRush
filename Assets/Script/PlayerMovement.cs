@@ -5,14 +5,18 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : NetworkBehaviour
 {
+    public static PlayerMovement Local;
     [Header("Components")]
     [SerializeField] private CharacterController character;
     [SerializeField] private Animator animator;
+    
 
     [Header("Settings")]
     [SerializeField] private float rotationSpeed = 15f;
     [SerializeField] private float moveSpeed = 4.5f;
     [SerializeField] private float sprintSpeed = 10f;
+    
+    
 
     [Header("Inertia Settings")]
     [SerializeField] private float acceleration = 10f;  // Tốc độ tăng tốc
@@ -43,6 +47,7 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] public bool isGroundedNetworked { get; set; }
     [Networked] private float _lastGroundedY { get; set; }
     [Networked] public bool isInMidAirAnim { get; set; }
+    [Networked] public Vector3 CheckpointPos { get; set; }
 
     [Header("Debug Info")]
     [Networked] public float currentDistToGround { get; set; }
@@ -51,6 +56,7 @@ public class PlayerMovement : NetworkBehaviour
     {
         if (HasInputAuthority)
         {
+            Local = this;
             TryAssignCamera();
 
             ThirdPersonCamera camScript = FindFirstObjectByType<ThirdPersonCamera>();
@@ -61,6 +67,43 @@ public class PlayerMovement : NetworkBehaviour
             }
         }
     }
+    public void SetCheckpoint(Vector3 pos)
+        {
+            if (!HasStateAuthority) return;
+
+            CheckpointPos = pos;
+            Debug.Log("Đã lưu checkpoint: " + pos);
+        }
+public void Respawn()
+{
+    if (!HasStateAuthority) return;
+
+    if (CheckpointPos == Vector3.zero)
+    {
+        Debug.Log("Chưa có checkpoint!");
+        return;
+    }
+
+    // 🔥 TẮT CONTROLLER TRƯỚC
+    character.enabled = false;
+
+    // 🎯 SET POSITION (nhấc lên chút để không dính đất)
+    transform.position = CheckpointPos + Vector3.up * 0.5f;
+
+    // 🔥 RESET TOÀN BỘ VẬN TỐC
+    _verticalVelocity = 0;
+    _currentHorizontalVelocity = Vector3.zero;
+
+    // 🔥 BẬT LẠI CONTROLLER
+    character.enabled = true;
+
+    Debug.Log("Respawn OK!");
+}
+[Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+public void RPC_Respawn()
+{
+    Respawn();
+}
 
     public override void FixedUpdateNetwork()
     {
@@ -113,6 +156,13 @@ public class PlayerMovement : NetworkBehaviour
         }
 
         isGroundedNetworked = character.isGrounded && !isInMidAirAnim;
+        if (HasInputAuthority)
+{
+    if (transform.position.y < -5f)
+    {
+        UIManager.Instance.ShowRespawn();
+    }
+}
     }
 
     private void HandleGravityAndJumping(Vector3 targetDirection)
@@ -200,4 +250,14 @@ public class PlayerMovement : NetworkBehaviour
             jumpRequested = true;
         }
     }
+    public void OnRespawn(InputValue value)
+{
+    if (!HasInputAuthority) return;
+
+    if (value.isPressed)
+    {
+        RPC_Respawn();
+        UIManager.Instance.HideRespawn();
+    }
+}
 }
