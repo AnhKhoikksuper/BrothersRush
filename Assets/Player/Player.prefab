@@ -1505,7 +1505,7 @@ MonoBehaviour:
   character: {fileID: 8301224054500398485}
   animator: {fileID: 9199978418865579031}
   rotationSpeed: 12
-  moveSpeed: 4.5
+  moveSpeed: 5.5
   sprintSpeed: 10
   acceleration: 10
   deceleration: 10
@@ -1518,10 +1518,13 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  _networkedSpeed: 0
-  _isGroundedNetworked: 0
-  _isInMidAirAnim: 0
-  _currentDistToGround: 0
+  _CurrentHorizontalVelocity: {x: 0, y: 0, z: 0}
+  _VerticalVelocity: 0
+  _NetworkedSpeed: 0
+  _IsGroundedNetworked: 0
+  _IsInMidAirAnim: 0
+  _CheckpointPos: {x: 0, y: 0, z: 0}
+  _CurrentDistToGround: 0
 --- !u!1 &7911766947805947312
 GameObject:
   m_ObjectHideFlags: 0

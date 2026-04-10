@@ -6,28 +6,26 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : NetworkBehaviour
 {
     public static PlayerMovement Local;
+
     [Header("Components")]
     [SerializeField] private CharacterController character;
     [SerializeField] private Animator animator;
-    
 
     [Header("Settings")]
     [SerializeField] private float rotationSpeed = 15f;
     [SerializeField] private float moveSpeed = 4.5f;
     [SerializeField] private float sprintSpeed = 10f;
-    
-    
 
     [Header("Inertia Settings")]
-    [SerializeField] private float acceleration = 10f;  // Tốc độ tăng tốc
-    [SerializeField] private float deceleration = 10f;  // Tốc độ giảm tốc
-    [SerializeField] private float airControl = 0.2f;   // Khả năng bẻ lái khi đang nhảy
+    [SerializeField] private float acceleration = 10f;
+    [SerializeField] private float deceleration = 10f;
+    [SerializeField] private float airControl = 0.2f;
 
     [Header("Jump & Gravity")]
     [SerializeField] private float jumpHeight = 2f;
     [SerializeField] private float gravity = -20f;
     [SerializeField] private float maxFallSpeed = -50f;
-    [SerializeField] private float jumpForwardBoost = 3f; // Lực đẩy thêm về phía trước khi nhảy
+    [SerializeField] private float jumpForwardBoost = 3f;
 
     [Tooltip("Độ cao rơi/nhảy tối thiểu để kích hoạt hoạt ảnh")]
     public float jumpHeightThreshold = 0.3f;
@@ -40,20 +38,23 @@ public class PlayerMovement : NetworkBehaviour
     private bool jumpRequested;
     private Transform mainCameraTransform;
 
-    // --- NETWORKED PROPERTIES ---
-    [Networked] private Vector3 _currentHorizontalVelocity { get; set; }
-    [Networked] private float _verticalVelocity { get; set; }
-    [Networked] public float networkedSpeed { get; set; }
-    [Networked] public bool isGroundedNetworked { get; set; }
-    [Networked] private float _lastGroundedY { get; set; }
-    [Networked] public bool isInMidAirAnim { get; set; }
+    // === NETWORKED PROPERTIES (phải là auto-property) ===
+    [Networked] public Vector3 CurrentHorizontalVelocity { get; set; }
+    [Networked] public float VerticalVelocity { get; set; }
+    [Networked] public float NetworkedSpeed { get; set; }
+    [Networked] public bool IsGroundedNetworked { get; set; }
+    [Networked] private float LastGroundedY { get; set; }
+    [Networked] public bool IsInMidAirAnim { get; set; }
     [Networked] public Vector3 CheckpointPos { get; set; }
+    [Networked] public float CurrentDistToGround { get; set; }
 
-    [Header("Debug Info")]
-    [Networked] public float currentDistToGround { get; set; }
+    // NetworkTransform (không [Networked])
+    private NetworkTransform networkTransform;
 
     public override void Spawned()
     {
+        networkTransform = GetComponent<NetworkTransform>();
+
         if (HasInputAuthority)
         {
             Local = this;
@@ -67,43 +68,52 @@ public class PlayerMovement : NetworkBehaviour
             }
         }
     }
+
     public void SetCheckpoint(Vector3 pos)
-        {
-            if (!HasStateAuthority) return;
-
-            CheckpointPos = pos;
-            Debug.Log("Đã lưu checkpoint: " + pos);
-        }
-public void Respawn()
-{
-    if (!HasStateAuthority) return;
-
-    if (CheckpointPos == Vector3.zero)
     {
-        Debug.Log("Chưa có checkpoint!");
-        return;
+        if (!HasStateAuthority) return;
+
+        CheckpointPos = pos;
+        Debug.Log("Đã lưu checkpoint: " + pos);
     }
 
-    // 🔥 TẮT CONTROLLER TRƯỚC
-    character.enabled = false;
+    public void Respawn()
+    {
+        if (!HasStateAuthority) return;
 
-    // 🎯 SET POSITION (nhấc lên chút để không dính đất)
-    transform.position = CheckpointPos + Vector3.up * 0.5f;
+        if (CheckpointPos == Vector3.zero)
+        {
+            Debug.Log("Chưa có checkpoint!");
+            return;
+        }
 
-    // 🔥 RESET TOÀN BỘ VẬN TỐC
-    _verticalVelocity = 0;
-    _currentHorizontalVelocity = Vector3.zero;
+        // === TẮT CÁC COMPONENT TRƯỚC KHI TELEPORT ===
+        if (character != null) character.enabled = false;
+        if (networkTransform != null) networkTransform.enabled = false;
 
-    // 🔥 BẬT LẠI CONTROLLER
-    character.enabled = true;
+        // Set vị trí mới (nhấc lên một chút để tránh dính đất)
+        transform.position = CheckpointPos + Vector3.up * 0.1f;
 
-    Debug.Log("Respawn OK!");
-}
-[Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-public void RPC_Respawn()
-{
-    Respawn();
-}
+        // Reset toàn bộ vận tốc
+        CurrentHorizontalVelocity = Vector3.zero;
+        VerticalVelocity = 0f;
+
+        // === BẬT LẠI VÀ TELEPORT ĐÚNG CÁCH ===
+        if (character != null) character.enabled = true;
+        if (networkTransform != null)
+        {
+            networkTransform.enabled = true;
+            networkTransform.Teleport(transform.position, transform.rotation); // Quan trọng: thông báo teleport cho client
+        }
+
+        Debug.Log("Respawn tại checkpoint thành công!");
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_Respawn()
+    {
+        Respawn();
+    }
 
     public override void FixedUpdateNetwork()
     {
@@ -111,99 +121,91 @@ public void RPC_Respawn()
 
         TryAssignCamera();
 
-        // 1. Tính hướng di chuyển từ Input
         Vector3 moveDirection = CalculateMoveDirection();
 
-        // 2. Tính tốc độ mục tiêu
-        float targetSpeed = 0f;
-        if (moveInput != Vector2.zero)
-        {
-            targetSpeed = isSprinting ? sprintSpeed : moveSpeed;
-        }
+        // Tính tốc độ mục tiêu
+        float targetSpeed = (moveInput != Vector2.zero) 
+            ? (isSprinting ? sprintSpeed : moveSpeed) 
+            : 0f;
+
         Vector3 targetVelocity = moveDirection * targetSpeed;
 
-        // 3. XỬ LÝ QUÁN TÍNH: Nội suy vận tốc hiện tại sang vận tốc mục tiêu
+        // Xử lý quán tính
         float lerpFactor = (targetSpeed > 0) ? acceleration : deceleration;
         if (!character.isGrounded) lerpFactor *= airControl;
 
-        _currentHorizontalVelocity = Vector3.Lerp(_currentHorizontalVelocity, targetVelocity, Runner.DeltaTime * lerpFactor);
+        CurrentHorizontalVelocity = Vector3.Lerp(
+            CurrentHorizontalVelocity, 
+            targetVelocity, 
+            Runner.DeltaTime * lerpFactor
+        );
 
-        // 4. Xử lý Trọng lực và Nhảy
+        // Gravity + Jump
         HandleGravityAndJumping(moveDirection);
 
-        // 5. THỰC HIỆN DI CHUYỂN
-        Vector3 finalVelocity = _currentHorizontalVelocity;
-        finalVelocity.y = _verticalVelocity;
+        // Di chuyển
+        Vector3 finalVelocity = CurrentHorizontalVelocity;
+        finalVelocity.y = VerticalVelocity;
 
         character.Move(finalVelocity * Runner.DeltaTime);
 
-        // 6. Xoay nhân vật
+        // Xoay nhân vật
         if (moveDirection != Vector3.zero)
         {
             Quaternion targetRot = Quaternion.LookRotation(moveDirection);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Runner.DeltaTime * rotationSpeed);
         }
 
-        // 7. CẬP NHẬT ANIMATION THEO INPUT (Không theo quán tính)
-        // Khi thả phím (moveInput == zero), networkedSpeed về 0 ngay lập tức
-        if (moveInput == Vector2.zero)
-        {
-            networkedSpeed = 0f;
-        }
-        else
-        {
-            networkedSpeed = isSprinting ? 1f : 0.5f;
-        }
+        // Update animation (dựa vào input, không phải vận tốc thực)
+        NetworkedSpeed = (moveInput == Vector2.zero) ? 0f : (isSprinting ? 1f : 0.5f);
 
-        isGroundedNetworked = character.isGrounded && !isInMidAirAnim;
-        if (HasInputAuthority)
-{
-    if (transform.position.y < -5f)
-    {
-        UIManager.Instance.ShowRespawn();
-    }
-}
+        IsGroundedNetworked = character.isGrounded && !IsInMidAirAnim;
+
+        if (transform.position.y < -5f)
+        {
+            UIManager.Instance.ShowRespawn();
+        }
     }
 
     private void HandleGravityAndJumping(Vector3 targetDirection)
     {
+        // Ground distance
         if (Physics.Raycast(transform.position + Vector3.up * 0.1f, Vector3.down, out RaycastHit hit, 20f, groundLayer))
-            currentDistToGround = hit.distance - 0.1f;
+            CurrentDistToGround = hit.distance - 0.1f;
         else
-            currentDistToGround = 99f;
+            CurrentDistToGround = 99f;
 
         if (character.isGrounded)
         {
-            if (_verticalVelocity < 0) _verticalVelocity = -2f;
-            _lastGroundedY = transform.position.y;
-            isInMidAirAnim = false;
+            if (VerticalVelocity < 0) VerticalVelocity = -2f;
+            LastGroundedY = transform.position.y;
+            IsInMidAirAnim = false;
 
             if (jumpRequested)
             {
-                _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                VerticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
-                // CỘNG THÊM LỰC ĐẨY TIẾN KHI NHẢY
                 if (targetDirection != Vector3.zero)
                 {
-                    _currentHorizontalVelocity += targetDirection * jumpForwardBoost;
+                    CurrentHorizontalVelocity += targetDirection * jumpForwardBoost;
                 }
 
                 jumpRequested = false;
-                isInMidAirAnim = true;
+                IsInMidAirAnim = true;
             }
         }
         else
         {
-            _verticalVelocity += gravity * Runner.DeltaTime;
-            if (_verticalVelocity < maxFallSpeed) _verticalVelocity = maxFallSpeed;
+            VerticalVelocity += gravity * Runner.DeltaTime;
+            if (VerticalVelocity < maxFallSpeed) VerticalVelocity = maxFallSpeed;
 
             jumpRequested = false;
 
-            float fallDistance = _lastGroundedY - transform.position.y;
-            float jumpDistance = transform.position.y - _lastGroundedY;
+            float fallDistance = LastGroundedY - transform.position.y;
+            float jumpDistance = transform.position.y - LastGroundedY;
 
             if (jumpDistance > jumpHeightThreshold || fallDistance > jumpHeightThreshold)
-                isInMidAirAnim = true;
+                IsInMidAirAnim = true;
         }
     }
 
@@ -223,7 +225,6 @@ public void RPC_Respawn()
 
         forward.y = 0;
         right.y = 0;
-
         forward.Normalize();
         right.Normalize();
 
@@ -234,30 +235,29 @@ public void RPC_Respawn()
     {
         if (animator != null)
         {
-            animator.SetFloat("Speed", networkedSpeed);
-            animator.SetBool("IsGrounded", isGroundedNetworked);
-            animator.SetBool("InAir", isInMidAirAnim);
+            animator.SetFloat("Speed", NetworkedSpeed);
+            animator.SetBool("IsGrounded", IsGroundedNetworked);
+            animator.SetBool("InAir", IsInMidAirAnim);
         }
     }
 
+    // === INPUT CALLBACKS ===
     public void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
     public void OnSprint(InputValue value) => isSprinting = value.isPressed;
 
     public void OnJump(InputValue value)
     {
         if (value.isPressed && character.isGrounded)
-        {
             jumpRequested = true;
+    }
+
+    public void OnRespawn(InputValue value)
+    {
+        if (!HasInputAuthority) return;
+        if (value.isPressed)
+        {
+            RPC_Respawn();
+            UIManager.Instance?.HideRespawn();
         }
     }
-    public void OnRespawn(InputValue value)
-{
-    if (!HasInputAuthority) return;
-
-    if (value.isPressed)
-    {
-        RPC_Respawn();
-        UIManager.Instance.HideRespawn();
-    }
-}
 }
