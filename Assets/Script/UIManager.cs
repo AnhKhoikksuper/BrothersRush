@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class UIManager : MonoBehaviour
 {
@@ -7,6 +8,8 @@ public class UIManager : MonoBehaviour
 
     [Header("Respawn UI")]
     public GameObject respawnPanel;
+    
+    
 
     private void Awake()
     {
@@ -86,4 +89,33 @@ public class UIManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
         }
     }
+    public GameObject puzzlePanel;
+    public GameObject puzzlePanel1;
+
+
+public TextMeshProUGUI questionText;
+public TextMeshProUGUI answerAText;
+public TextMeshProUGUI answerBText;
+
+    private PuzzleZone currentPuzzle;
+
+    public void ShowPuzzle(PuzzleZone puzzle)
+    {
+        currentPuzzle = puzzle;
+        puzzlePanel.SetActive(true);
+    }
+
+    public void HidePuzzle()
+    {
+        puzzlePanel.SetActive(false);
+    }
+public void OnChooseA()
+{
+    currentPuzzle.ChooseA(PlayerMovement.Local);
+}
+
+public void OnChooseB()
+{
+    currentPuzzle.ChooseB(PlayerMovement.Local);
+}
 }

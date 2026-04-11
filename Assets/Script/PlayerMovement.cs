@@ -47,6 +47,7 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] public bool IsInMidAirAnim { get; set; }
     [Networked] public Vector3 CheckpointPos { get; set; }
     [Networked] public float CurrentDistToGround { get; set; }
+    [Networked] public bool IsLocked { get; set; }
 
     // NetworkTransform (không [Networked])
     private NetworkTransform networkTransform;
@@ -117,7 +118,7 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority) return;
+        if (!HasInputAuthority || IsLocked) return;
 
         TryAssignCamera();
 
@@ -166,6 +167,7 @@ public class PlayerMovement : NetworkBehaviour
             UIManager.Instance.ShowRespawn();
         }
     }
+    
 
     private void HandleGravityAndJumping(Vector3 targetDirection)
     {
@@ -259,5 +261,10 @@ public class PlayerMovement : NetworkBehaviour
             RPC_Respawn();
             UIManager.Instance?.HideRespawn();
         }
+    }
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_Lock(bool value)
+    {
+        IsLocked = value;
     }
 }
