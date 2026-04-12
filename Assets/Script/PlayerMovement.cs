@@ -10,6 +10,7 @@ public class PlayerMovement : NetworkBehaviour
     [Header("Components")]
     [SerializeField] private CharacterController character;
     [SerializeField] private Animator animator;
+    [SerializeField] private AudioSource footstepAudio;
 
     [Header("Settings")]
     [SerializeField] private float rotationSpeed = 15f;
@@ -119,6 +120,26 @@ public class PlayerMovement : NetworkBehaviour
     public override void FixedUpdateNetwork()
     {
         if (!HasInputAuthority || IsLocked) return;
+    if (HasInputAuthority)
+    {
+        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+
+        // 🎵 FOOTSTEP
+        if (move.magnitude > 0.1f && character.isGrounded)
+        {
+            if (!footstepAudio.isPlaying)
+            {
+                footstepAudio.Play();
+            }
+        }
+        else
+        {
+            if (footstepAudio.isPlaying)
+            {
+                footstepAudio.Stop();
+            }
+        }
+    }
 
         TryAssignCamera();
 
