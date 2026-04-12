@@ -90,7 +90,6 @@ public class UIManager : MonoBehaviour
         }
     }
     public GameObject puzzlePanel;
-    public GameObject puzzlePanel1;
 
 
 public TextMeshProUGUI questionText;
@@ -99,11 +98,17 @@ public TextMeshProUGUI answerBText;
 
     private PuzzleZone currentPuzzle;
 
-    public void ShowPuzzle(PuzzleZone puzzle)
-    {
-        currentPuzzle = puzzle;
-        puzzlePanel.SetActive(true);
-    }
+public void ShowPuzzle(PuzzleZone puzzle)
+{
+    currentPuzzle = puzzle;
+
+    // 🔥 GÁN TEXT TẠI ĐÂY
+    questionText.text = puzzle.GetQuestion();
+    answerAText.text = puzzle.GetAnswerA();
+    answerBText.text = puzzle.GetAnswerB();
+
+    puzzlePanel.SetActive(true);
+}
 
     public void HidePuzzle()
     {
