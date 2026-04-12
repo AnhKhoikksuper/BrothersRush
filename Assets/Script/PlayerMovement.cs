@@ -49,7 +49,8 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] public Vector3 CheckpointPos { get; set; }
     [Networked] public float CurrentDistToGround { get; set; }
     [Networked] public bool IsLocked { get; set; }
-
+    [Networked] public bool HasDoubleJumped { get; set; }
+    [Networked] public bool TriggerDoubleJump { get; set; }
     // NetworkTransform (không [Networked])
     private NetworkTransform networkTransform;
 
@@ -120,34 +121,35 @@ public class PlayerMovement : NetworkBehaviour
     public override void FixedUpdateNetwork()
     {
         if (!HasInputAuthority || IsLocked) return;
-    if (HasInputAuthority)
-    {
-        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
 
-        // 🎵 FOOTSTEP
-        if (move.magnitude > 0.1f && character.isGrounded)
+        if (HasInputAuthority)
         {
-            if (!footstepAudio.isPlaying)
+            Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+
+            // 🎵 FOOTSTEP
+            if (move.magnitude > 0.1f && character.isGrounded)
             {
-                footstepAudio.Play();
+                if (!footstepAudio.isPlaying)
+                {
+                    footstepAudio.Play();
+                }
+            }
+            else
+            {
+                if (footstepAudio.isPlaying)
+                {
+                    footstepAudio.Stop();
+                }
             }
         }
-        else
-        {
-            if (footstepAudio.isPlaying)
-            {
-                footstepAudio.Stop();
-            }
-        }
-    }
 
         TryAssignCamera();
 
         Vector3 moveDirection = CalculateMoveDirection();
 
         // Tính tốc độ mục tiêu
-        float targetSpeed = (moveInput != Vector2.zero) 
-            ? (isSprinting ? sprintSpeed : moveSpeed) 
+        float targetSpeed = (moveInput != Vector2.zero)
+            ? (isSprinting ? sprintSpeed : moveSpeed)
             : 0f;
 
         Vector3 targetVelocity = moveDirection * targetSpeed;
@@ -157,8 +159,8 @@ public class PlayerMovement : NetworkBehaviour
         if (!character.isGrounded) lerpFactor *= airControl;
 
         CurrentHorizontalVelocity = Vector3.Lerp(
-            CurrentHorizontalVelocity, 
-            targetVelocity, 
+            CurrentHorizontalVelocity,
+            targetVelocity,
             Runner.DeltaTime * lerpFactor
         );
 
@@ -188,7 +190,7 @@ public class PlayerMovement : NetworkBehaviour
             UIManager.Instance.ShowRespawn();
         }
     }
-    
+
 
     private void HandleGravityAndJumping(Vector3 targetDirection)
     {
@@ -204,31 +206,33 @@ public class PlayerMovement : NetworkBehaviour
             LastGroundedY = transform.position.y;
             IsInMidAirAnim = false;
 
-            if (jumpRequested)
-            {
-                VerticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
-
-                if (targetDirection != Vector3.zero)
-                {
-                    CurrentHorizontalVelocity += targetDirection * jumpForwardBoost;
-                }
-
-                jumpRequested = false;
-                IsInMidAirAnim = true;
-            }
+            HasDoubleJumped = false;                    // Reset double jump
         }
         else
         {
             VerticalVelocity += gravity * Runner.DeltaTime;
             if (VerticalVelocity < maxFallSpeed) VerticalVelocity = maxFallSpeed;
+        }
+
+        // === XỬ LÝ JUMP REQUEST ===
+        if (jumpRequested)
+        {
+            VerticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+
+            if (targetDirection != Vector3.zero)
+            {
+                CurrentHorizontalVelocity += targetDirection * jumpForwardBoost;
+            }
 
             jumpRequested = false;
+            IsInMidAirAnim = true;
 
-            float fallDistance = LastGroundedY - transform.position.y;
-            float jumpDistance = transform.position.y - LastGroundedY;
-
-            if (jumpDistance > jumpHeightThreshold || fallDistance > jumpHeightThreshold)
-                IsInMidAirAnim = true;
+            // ← THÊM DÒNG NÀY: Chỉ kích hoạt animation Double Jump khi là lần nhảy thứ 2
+            if (!character.isGrounded)
+            {
+                HasDoubleJumped = true;
+                TriggerDoubleJump = true;          // Trigger animation double jump
+            }
         }
     }
 
@@ -261,6 +265,16 @@ public class PlayerMovement : NetworkBehaviour
             animator.SetFloat("Speed", NetworkedSpeed);
             animator.SetBool("IsGrounded", IsGroundedNetworked);
             animator.SetBool("InAir", IsInMidAirAnim);
+
+            // === DOUBLE JUMP TRIGGER ===
+            if (TriggerDoubleJump)
+            {
+                animator.SetTrigger("DoubleJump");     // Trigger animation trên TẤT CẢ client
+
+                // Chỉ InputAuthority mới được reset (sẽ replicate sang các client khác)
+                if (HasInputAuthority)
+                    TriggerDoubleJump = false;
+            }
         }
     }
 
@@ -268,10 +282,17 @@ public class PlayerMovement : NetworkBehaviour
     public void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
     public void OnSprint(InputValue value) => isSprinting = value.isPressed;
 
+    // === INPUT CALLBACKS ===
     public void OnJump(InputValue value)
     {
-        if (value.isPressed && character.isGrounded)
-            jumpRequested = true;
+        if (value.isPressed)
+        {
+            // Cho phép nhảy lần 1 (khi đang đứng đất) HOẶC nhảy lần 2 (khi đang ở trên không và chưa dùng double jump)
+            if (character.isGrounded || (!character.isGrounded && !HasDoubleJumped))
+            {
+                jumpRequested = true;
+            }
+        }
     }
 
     public void OnRespawn(InputValue value)
