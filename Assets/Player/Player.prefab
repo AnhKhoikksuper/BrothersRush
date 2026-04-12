@@ -1352,6 +1352,7 @@ GameObject:
   - component: {fileID: 3639812099937792076}
   - component: {fileID: 9048755920344424067}
   - component: {fileID: -6948649464610690064}
+  - component: {fileID: 4830342144640182810}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -1443,6 +1444,7 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 6941059859551774856}
   - {fileID: 9048755920344424067}
+  - {fileID: 4830342144640182810}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &6941059859551774856
 MonoBehaviour:
@@ -1625,6 +1627,19 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &4830342144640182810
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7837862918509144122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9607043a14ec92648962ac6a86437d46, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tipPanel: {fileID: 0}
 --- !u!1 &7911766947805947312
 GameObject:
   m_ObjectHideFlags: 0
