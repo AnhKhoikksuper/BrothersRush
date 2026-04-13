@@ -12,7 +12,7 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private AudioSource footstepAudio;
 
-    [Header("Settings")]
+    [Header("Speed")]
     [SerializeField] private float rotationSpeed = 15f;
     [SerializeField] private float moveSpeed = 4.5f;
     [SerializeField] private float sprintSpeed = 10f;
@@ -50,7 +50,8 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] public float CurrentDistToGround { get; set; }
     [Networked] public bool IsLocked { get; set; }
     [Networked] public bool HasDoubleJumped { get; set; }
-    [Networked] public bool TriggerDoubleJump { get; set; }
+    [Networked] public bool HasUnlockedDoubleJump { get; set; }
+    [Networked] private bool TriggerDoubleJump { get; set; }
     // NetworkTransform (không [Networked])
     private NetworkTransform networkTransform;
 
@@ -62,7 +63,7 @@ public class PlayerMovement : NetworkBehaviour
         {
             Local = this;
             TryAssignCamera();
-
+            HasUnlockedDoubleJump = false;
             ThirdPersonCamera camScript = FindFirstObjectByType<ThirdPersonCamera>();
             if (camScript != null)
             {
@@ -143,8 +144,6 @@ public class PlayerMovement : NetworkBehaviour
             }
         }
 
-        TryAssignCamera();
-
         Vector3 moveDirection = CalculateMoveDirection();
 
         // Tính tốc độ mục tiêu
@@ -214,7 +213,9 @@ public class PlayerMovement : NetworkBehaviour
             if (VerticalVelocity < maxFallSpeed) VerticalVelocity = maxFallSpeed;
         }
 
-        // === XỬ LÝ JUMP REQUEST ===
+        // === XỬ LÝ NHẢY ===
+        // Bỏ "&& AllowDoubleJump" ở đây vì OnJump đã check rồi. 
+        // Nếu jumpRequested = true, nghĩa là nó đã vượt qua bài kiểm tra ở OnJump.
         if (jumpRequested)
         {
             VerticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
@@ -224,15 +225,15 @@ public class PlayerMovement : NetworkBehaviour
                 CurrentHorizontalVelocity += targetDirection * jumpForwardBoost;
             }
 
-            jumpRequested = false;
-            IsInMidAirAnim = true;
-
-            // ← THÊM DÒNG NÀY: Chỉ kích hoạt animation Double Jump khi là lần nhảy thứ 2
+            // Nếu đang ở trên không thì mới tính là Double Jump
             if (!character.isGrounded)
             {
                 HasDoubleJumped = true;
-                TriggerDoubleJump = true;          // Trigger animation double jump
+                TriggerDoubleJump = true;
             }
+
+            jumpRequested = false;
+            IsInMidAirAnim = true;
         }
     }
 
@@ -267,10 +268,9 @@ public class PlayerMovement : NetworkBehaviour
             animator.SetBool("InAir", IsInMidAirAnim);
 
             // === DOUBLE JUMP TRIGGER ===
-            if (TriggerDoubleJump)
+            if (TriggerDoubleJump && HasUnlockedDoubleJump)
             {
                 animator.SetTrigger("DoubleJump");     // Trigger animation trên TẤT CẢ client
-
                 // Chỉ InputAuthority mới được reset (sẽ replicate sang các client khác)
                 if (HasInputAuthority)
                     TriggerDoubleJump = false;
@@ -283,13 +283,20 @@ public class PlayerMovement : NetworkBehaviour
     public void OnSprint(InputValue value) => isSprinting = value.isPressed;
 
     // === INPUT CALLBACKS ===
+    // === CẬP NHẬT QUAN TRỌNG NHẤT TRONG ONJUMP ===
     public void OnJump(InputValue value)
     {
         if (value.isPressed)
         {
-            // Cho phép nhảy lần 1 (khi đang đứng đất) HOẶC nhảy lần 2 (khi đang ở trên không và chưa dùng double jump)
-            if (character.isGrounded || (!character.isGrounded && !HasDoubleJumped))
+            // 1. Nếu đang đứng trên đất -> Nhảy bình thường
+            if (character.isGrounded)
             {
+                jumpRequested = true;
+            }
+            // 2. Nếu đang ở trên không -> Chỉ cho nhảy nếu AllowDoubleJump là true VÀ chưa nhảy lần 2
+            else if (HasUnlockedDoubleJump && !HasDoubleJumped)
+            {
+                Debug.Log("Double Jump On Jump");
                 jumpRequested = true;
             }
         }
@@ -308,5 +315,12 @@ public class PlayerMovement : NetworkBehaviour
     public void RPC_Lock(bool value)
     {
         IsLocked = value;
+    }
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    public void RPC_EnableDoubleJump()
+    {
+        if (!HasStateAuthority) return;
+        if (HasUnlockedDoubleJump) return;
+        HasUnlockedDoubleJump = true;
     }
 }
