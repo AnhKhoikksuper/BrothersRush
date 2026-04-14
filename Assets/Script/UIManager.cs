@@ -21,6 +21,14 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI answerAText;
     public TextMeshProUGUI answerBText;
 
+    [Header("Chest UI")]
+    public GameObject chestPanel;
+
+    [Header("End Game UI")]
+    public GameObject endGamePanel;
+    [SerializeField] private AudioClip openChestSound;
+    [SerializeField] private AudioSource audioSource;
+
     private PuzzleZone currentPuzzle;
 
 
@@ -43,6 +51,15 @@ public class UIManager : MonoBehaviour
         else
         {
             Debug.LogWarning("Respawn Panel chưa được gán trong UIManager!");
+        }
+        if (chestPanel != null)
+        {
+            chestPanel.SetActive(false);
+        }
+
+        if (endGamePanel != null)
+        {
+            endGamePanel.SetActive(false);
         }
     }
 
@@ -210,5 +227,50 @@ public class UIManager : MonoBehaviour
     public void OnChooseB()
     {
         currentPuzzle.ChooseB(PlayerMovement.Local);
+    }
+    public void ShowChestUI()
+    {
+        if (chestPanel != null)
+        {
+            chestPanel.SetActive(true);
+        }
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
+
+    public void HideChestUI()
+    {
+        if (chestPanel != null)
+        {
+            chestPanel.SetActive(false);
+        }
+
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    public void OnClickOpenChest()
+    {
+        if (audioSource != null && openChestSound != null)
+        {
+            audioSource.PlayOneShot(openChestSound);
+        }
+        // Ẩn UI rương
+        if (chestPanel != null)
+            chestPanel.SetActive(false);
+
+        // Hiện màn hình thắng
+        if (endGamePanel != null)
+            endGamePanel.SetActive(true);
+
+        // 🔥 KHÓA PLAYER
+        if (PlayerMovement.Local != null)
+        {
+            PlayerMovement.Local.IsLocked = true;
+        }
+
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
     }
 }
