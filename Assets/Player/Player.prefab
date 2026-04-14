@@ -1448,11 +1448,8 @@ MonoBehaviour:
   - {fileID: 6941059859551774856}
   - {fileID: 9048755920344424067}
   - {fileID: 4830342144640182810}
-
   - {fileID: 3746064013842684019}
-
   - {fileID: 7504742667815933666}
-
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &6941059859551774856
 MonoBehaviour:
@@ -1649,11 +1646,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9607043a14ec92648962ac6a86437d46, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-
 --- !u!114 &3746064013842684019
-
---- !u!114 &7504742667815933666
-
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1662,7 +1655,24 @@ MonoBehaviour:
   m_GameObject: {fileID: 7837862918509144122}
   m_Enabled: 1
   m_EditorHideFlags: 0
-
+  m_Script: {fileID: 11500000, guid: 59c838e1e4edea946930b62e29a1c8c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textMessage: {fileID: 0}
+  inputFieldMessage: {fileID: 0}
+  buttonSend: {fileID: 0}
+  panelMessageImage: {fileID: 0}
+  fadeDelay: 2
+  fadeDuration: 1
+--- !u!114 &7504742667815933666
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7837862918509144122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 70b5d8159e6f4444aa2f42cb8f248bff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
@@ -1753,14 +1763,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
-
-  m_Script: {fileID: 11500000, guid: 59c838e1e4edea946930b62e29a1c8c1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  textMessage: {fileID: 0}
-  inputFieldMessage: {fileID: 0}
-  buttonSend: {fileID: 0}
-
 --- !u!1 &7911766947805947312
 GameObject:
   m_ObjectHideFlags: 0
