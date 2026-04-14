@@ -6,7 +6,9 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : NetworkBehaviour
 {
     public static PlayerMovement Local;
-
+    [SerializeField] private GameObject explosionPrefab;
+    [SerializeField] private AudioClip explosionSound;
+    [SerializeField] private AudioSource audioSource;
     [Header("Components")]
     [SerializeField] private CharacterController character;
     [SerializeField] private Animator animator;
@@ -96,7 +98,10 @@ public class PlayerMovement : NetworkBehaviour
         if (networkTransform != null) networkTransform.enabled = false;
 
         // Set vị trí mới (nhấc lên một chút để tránh dính đất)
-        transform.position = CheckpointPos + Vector3.up * 0.1f;
+        Vector3 pos = CheckpointPos;
+        pos.y += character.height / 2f;
+
+        transform.position = pos;
 
         // Reset toàn bộ vận tốc
         CurrentHorizontalVelocity = Vector3.zero;
@@ -109,6 +114,19 @@ public class PlayerMovement : NetworkBehaviour
             networkTransform.enabled = true;
             networkTransform.Teleport(transform.position, transform.rotation); // Quan trọng: thông báo teleport cho client
         }
+        IsLocked = false;
+
+        if (character != null) character.enabled = true;
+        if (animator != null) animator.enabled = true;
+
+        // hiện lại model
+        foreach (Renderer r in GetComponentsInChildren<Renderer>())
+        {
+            r.enabled = true;
+        }
+
+        // mở khóa điều khiển
+        IsLocked = false;
 
         Debug.Log("Respawn tại checkpoint thành công!");
     }
@@ -327,5 +345,40 @@ public class PlayerMovement : NetworkBehaviour
     public void RPC_SetReady()
     {
         GameManager.Instance.IncreaseReady();
+    }
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    public void RpcHitWrongGlass()
+    {
+        // 💥 spawn hiệu ứng nổ
+        if (explosionPrefab != null)
+        {
+            Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        }
+        if (audioSource != null && explosionSound != null)
+        {
+            audioSource.PlayOneShot(explosionSound);
+        }
+
+        // 👤 Ẩn player
+        character.enabled = false;
+
+        if (animator != null) animator.enabled = false;
+
+        // ẩn model (nếu có mesh)
+        foreach (Renderer r in GetComponentsInChildren<Renderer>())
+        {
+            r.enabled = false;
+        }
+
+        // khóa điều khiển
+        IsLocked = true;
+
+        // UI
+        if (HasInputAuthority)
+        {
+            UIManager.Instance.ShowRespawn();
+        }
+
+        Debug.Log("Nổ!");
     }
 }

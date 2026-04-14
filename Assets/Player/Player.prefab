@@ -1510,6 +1510,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58959c21ca66d514b9ab76906accf7bc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  explosionPrefab: {fileID: 3610889455336590686, guid: 26d2446f4cb34c34b8be65bc240be90b, type: 3}
+  explosionSound: {fileID: 8300000, guid: 09737c0c79179eb49a74fe623ae6da2e, type: 3}
+  audioSource: {fileID: -6948649464610690064}
   character: {fileID: 8301224054500398485}
   animator: {fileID: 9199978418865579031}
   footstepAudio: {fileID: -6948649464610690064}
