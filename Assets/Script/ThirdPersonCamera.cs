@@ -5,7 +5,7 @@ using Unity.Cinemachine; // Chuẩn namespace mới
 public class ThirdPersonCamera : MonoBehaviour
 {
     // Ở bản mới, FreeLook được tích hợp vào CinemachineCamera
-    public CinemachineCamera _vcam; 
+    public CinemachineCamera _vcam;
     private bool _isCursorLocked = true;
 
     void Awake()
@@ -17,16 +17,16 @@ public class ThirdPersonCamera : MonoBehaviour
 
     void Start()
     {
-        ToggleCursor(true);
+        SetCursorLock(false);
     }
 
     void Update()
     {
-        if (Keyboard.current != null && 
+        if (Keyboard.current != null &&
            (Keyboard.current.leftCtrlKey.wasPressedThisFrame || Keyboard.current.rightCtrlKey.wasPressedThisFrame))
         {
             _isCursorLocked = !_isCursorLocked;
-            ToggleCursor(_isCursorLocked);
+            SetCursorLock(_isCursorLocked);
         }
     }
 
@@ -37,21 +37,25 @@ public class ThirdPersonCamera : MonoBehaviour
             // Cú pháp vẫn tương tự nhưng dùng cho component mới
             _vcam.Follow = newTarget;
             _vcam.LookAt = newTarget;
-            
+
             Debug.Log($"[Cinemachine 3] Đã bám theo mục tiêu: {newTarget.name}");
         }
     }
 
-    private void ToggleCursor(bool isLocked)
+    public void SetCursorLock(bool isLocked)
     {
+        _isCursorLocked = isLocked;
+
+        // 🔥 Quản lý cursor
         Cursor.lockState = isLocked ? CursorLockMode.Locked : CursorLockMode.None;
         Cursor.visible = !isLocked;
-        
+
+        // 🔥 Bật/tắt input Cinemachine
         if (_vcam != null)
         {
-            // Cách tắt input ở bản mới
             var inputHandler = _vcam.GetComponent<CinemachineInputAxisController>();
-            if (inputHandler != null) inputHandler.enabled = isLocked;
+            if (inputHandler != null)
+                inputHandler.enabled = isLocked;
         }
     }
 }

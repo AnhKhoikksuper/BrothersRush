@@ -5,11 +5,24 @@ using TMPro;
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
-
+    [Header("Ready UI")]
+    public GameObject readyPanel;
+    public TextMeshProUGUI readyText;
+    public TextMeshProUGUI countdownText;
+    public GameObject readyButton;
+    int lastReadyCount = -1;
+    int lastTotalPlayers = -1;
+    bool lastGameState = false;
+    int lastCountdown = -1;
     [Header("Respawn UI")]
     public GameObject respawnPanel;
-    
-    
+    public GameObject puzzlePanel;
+    public TextMeshProUGUI questionText;
+    public TextMeshProUGUI answerAText;
+    public TextMeshProUGUI answerBText;
+
+    private PuzzleZone currentPuzzle;
+
 
     private void Awake()
     {
@@ -33,6 +46,72 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        if (GameManager.Instance == null || !GameManager.Instance.Object || !GameManager.Instance.Object.IsValid)
+            return;
+
+        var gm = GameManager.Instance;
+
+        // 🔥 1. Chỉ update text khi thay đổi
+        if (gm.readyCount != lastReadyCount || gm.totalPlayers != lastTotalPlayers)
+        {
+            lastReadyCount = gm.readyCount;
+            lastTotalPlayers = gm.totalPlayers;
+
+            readyText.text = $"{gm.readyCount} / {gm.totalPlayers} Ready";
+        }
+
+        // 🔥 2. Countdown (chỉ update khi số thay đổi)
+        var timer = gm.countdownTimer;
+
+        if (timer.IsRunning)
+        {
+            float? timeLeft = timer.RemainingTime(gm.Runner);
+
+            if (timeLeft.HasValue)
+            {
+                int currentTime = Mathf.CeilToInt(timeLeft.Value);
+
+                if (currentTime != lastCountdown)
+                {
+                    lastCountdown = currentTime;
+                    countdownText.text = currentTime.ToString();
+                }
+            }
+        }
+
+        // 🔥 3. Game state (chỉ chạy khi đổi trạng thái)
+        if (gm.isGameStarted != lastGameState)
+        {
+            lastGameState = gm.isGameStarted;
+
+            if (gm.isGameStarted)
+            {
+                countdownText.text = "BẮT ĐẦU!";
+                HideReady();
+            }
+            else
+            {
+                ShowReady();
+            }
+        }
+    }
+    public void ShowReady()
+    {
+        // 🔥 Chưa bắt đầu → hiện lại panel (trường hợp reset game)
+        if (!readyPanel.activeSelf)
+            readyPanel.SetActive(true);
+        // Hiện chuột để người chơi có thể click nút
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+    }
+    public void HideReady()
+    {
+        // 🔥 Ẩn Ready Panel
+        if (readyPanel.activeSelf)
+            readyPanel.SetActive(false);
+    }
     /// <summary>
     /// Hiển thị panel Respawn và hiện chuột
     /// </summary>
@@ -89,38 +168,47 @@ public class UIManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
         }
     }
-    public GameObject puzzlePanel;
+    public void OnClickReady()
+    {
+        if (PlayerMovement.Local != null)
+        {
+            PlayerMovement.Local.RPC_SetReady();
 
+            // 🔥 Lấy camera
+            var cam = FindFirstObjectByType<ThirdPersonCamera>();
 
-public TextMeshProUGUI questionText;
-public TextMeshProUGUI answerAText;
-public TextMeshProUGUI answerBText;
+            if (cam != null)
+            {
+                cam.SetCursorLock(true); // bật lại camera + lock chuột
+            }
 
-    private PuzzleZone currentPuzzle;
+            // 🔥 Clear UI focus (rất quan trọng)
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+        }
+    }
+    public void ShowPuzzle(PuzzleZone puzzle)
+    {
+        currentPuzzle = puzzle;
 
-public void ShowPuzzle(PuzzleZone puzzle)
-{
-    currentPuzzle = puzzle;
+        // 🔥 GÁN TEXT TẠI ĐÂY
+        questionText.text = puzzle.GetQuestion();
+        answerAText.text = puzzle.GetAnswerA();
+        answerBText.text = puzzle.GetAnswerB();
 
-    // 🔥 GÁN TEXT TẠI ĐÂY
-    questionText.text = puzzle.GetQuestion();
-    answerAText.text = puzzle.GetAnswerA();
-    answerBText.text = puzzle.GetAnswerB();
-
-    puzzlePanel.SetActive(true);
-}
+        puzzlePanel.SetActive(true);
+    }
 
     public void HidePuzzle()
     {
         puzzlePanel.SetActive(false);
     }
-public void OnChooseA()
-{
-    currentPuzzle.ChooseA(PlayerMovement.Local);
-}
+    public void OnChooseA()
+    {
+        currentPuzzle.ChooseA(PlayerMovement.Local);
+    }
 
-public void OnChooseB()
-{
-    currentPuzzle.ChooseB(PlayerMovement.Local);
-}
+    public void OnChooseB()
+    {
+        currentPuzzle.ChooseB(PlayerMovement.Local);
+    }
 }
