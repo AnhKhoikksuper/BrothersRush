@@ -13,6 +13,8 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private CharacterController character;
     [SerializeField] private Animator animator;
     [SerializeField] private AudioSource footstepAudio;
+    [SerializeField] private AudioSource sfxAudio;
+    [SerializeField] private AudioClip jumpSound;
 
     [Header("Speed")]
     [SerializeField] private float rotationSpeed = 15f;
@@ -237,7 +239,25 @@ public class PlayerMovement : NetworkBehaviour
         if (jumpRequested)
         {
             VerticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            // 🔥 PLAY SOUND TẠI ĐÂY
+            if (HasInputAuthority && sfxAudio != null && jumpSound != null)
+            {
+                sfxAudio.PlayOneShot(jumpSound);
+            }
 
+            if (targetDirection != Vector3.zero)
+            {
+                CurrentHorizontalVelocity += targetDirection * jumpForwardBoost;
+            }
+
+            if (!character.isGrounded)
+            {
+                HasDoubleJumped = true;
+                TriggerDoubleJump = true;
+            }
+
+            jumpRequested = false;
+            IsInMidAirAnim = true;
             if (targetDirection != Vector3.zero)
             {
                 CurrentHorizontalVelocity += targetDirection * jumpForwardBoost;
