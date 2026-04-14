@@ -1522,7 +1522,7 @@ MonoBehaviour:
   acceleration: 10
   deceleration: 10
   airControl: 0.2
-  jumpHeight: 2
+  jumpHeight: 4
   gravity: -30
   maxFallSpeed: -90
   jumpForwardBoost: 2
@@ -1766,6 +1766,9 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+  chatUIContent: {fileID: 0}
+  fadeDelay: 2
+  fadeDuration: 1
 --- !u!1 &7911766947805947312
 GameObject:
   m_ObjectHideFlags: 0
