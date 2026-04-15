@@ -361,11 +361,6 @@ public class PlayerMovement : NetworkBehaviour
         if (HasUnlockedDoubleJump) return;
         HasUnlockedDoubleJump = true;
     }
-    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    public void RPC_SetReady()
-    {
-        GameManager.Instance.IncreaseReady();
-    }
     [Rpc(RpcSources.All, RpcTargets.All)]
     public void RpcHitWrongGlass()
     {

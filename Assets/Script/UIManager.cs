@@ -170,21 +170,23 @@ public class UIManager : MonoBehaviour
     }
     public void OnClickReady()
     {
-        if (PlayerMovement.Local != null)
+        if (GameManager.Instance != null && GameManager.Instance.Object != null && GameManager.Instance.Object.IsValid)
         {
-            PlayerMovement.Local.RPC_SetReady();
-
-            // 🔥 Lấy camera
-            var cam = FindFirstObjectByType<ThirdPersonCamera>();
-
-            if (cam != null)
-            {
-                cam.SetCursorLock(true); // bật lại camera + lock chuột
-            }
-
-            // 🔥 Clear UI focus (rất quan trọng)
-            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+            GameManager.Instance.RPC_SetReady(GameManager.Instance.Runner.LocalPlayer); // ✅ FIX
         }
+        else
+        {
+            Debug.LogWarning("GameManager chưa sẵn sàng!");
+            return;
+        }
+
+        var cam = FindFirstObjectByType<ThirdPersonCamera>();
+        if (cam != null)
+        {
+            cam.SetCursorLock(true);
+        }
+
+        UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
     }
     public void ShowPuzzle(PuzzleZone puzzle)
     {
