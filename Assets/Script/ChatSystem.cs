@@ -3,6 +3,8 @@ using Fusion;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections;
+using UnityEngine.InputSystem;
+using System.Collections.Generic;   // Thêm để dùng List
 
 public class ChatSystem : NetworkBehaviour
 {
@@ -17,24 +19,82 @@ public class ChatSystem : NetworkBehaviour
     private float originalAlpha;
     private Coroutine fadeCoroutine;
 
+    private InputAction toggleChatAction;
+
+    // Placeholder
+    public TextMeshProUGUI placeholderText;
+
+    // === THÊM: Danh sách lưu tin nhắn để giới hạn số lượng ===
+    private List<string> chatLines = new List<string>();
+    private const int MAX_CHAT_LINES = 10;
+
     public override void Spawned()
     {
+        // Tìm UI
         textMessage = GameObject.Find("TextMessage")?.GetComponent<TextMeshProUGUI>();
         inputFieldMessage = GameObject.Find("InputFieldMessage")?.GetComponent<TMP_InputField>();
         buttonSend = GameObject.Find("ButtonSend")?.GetComponent<Button>();
         panelMessageImage = GameObject.Find("Panel Message")?.GetComponent<Image>();
+        placeholderText = GameObject.Find("Placeholder")?.GetComponent<TextMeshProUGUI>();
 
-        // Check null
         if (textMessage == null || inputFieldMessage == null || buttonSend == null || panelMessageImage == null)
         {
-            Debug.LogError("Kh�ng t�m th?y UI Chat! Ki?m tra l?i t�n object trong Hierarchy");
+            Debug.LogError("Không tìm thấy UI Chat! Kiểm tra lại tên object trong Hierarchy");
             return;
         }
 
         originalAlpha = panelMessageImage.color.a;
 
+        // === THÊM LISTENER ===
+        inputFieldMessage.onSelect.AddListener(OnChatFocus);
+        inputFieldMessage.onDeselect.AddListener(OnChatUnfocus);
         buttonSend.onClick.AddListener(SendMessageChat);
         inputFieldMessage.onSubmit.AddListener(delegate { SendMessageChat(); });
+
+        // === PHÍM C NHANH ===
+        toggleChatAction = new InputAction("ToggleChat", InputActionType.Button, "<Keyboard>/c");
+        toggleChatAction.performed += ctx => FocusChatInput();
+        toggleChatAction.Enable();
+    }
+
+    /// <summary>
+    /// Luôn focus vào InputField khi nhấn C
+    /// </summary>
+    private void FocusChatInput()
+    {
+        if (inputFieldMessage == null) return;
+
+        if (!inputFieldMessage.isFocused)
+        {
+            inputFieldMessage.ActivateInputField();
+            if (placeholderText != null)
+                placeholderText.gameObject.SetActive(false);
+        }
+        else
+        {
+            inputFieldMessage.MoveTextEnd(false);
+        }
+
+        if (PlayerMovement.Local != null)
+            PlayerMovement.Local.allowControl = false;
+    }
+
+    private void OnChatFocus(string text)
+    {
+        if (PlayerMovement.Local != null)
+            PlayerMovement.Local.allowControl = false;
+
+        if (placeholderText != null)
+            placeholderText.gameObject.SetActive(false);
+    }
+
+    private void OnChatUnfocus(string text)
+    {
+        if (PlayerMovement.Local != null)
+            PlayerMovement.Local.allowControl = true;
+
+        if (placeholderText != null && string.IsNullOrEmpty(inputFieldMessage.text))
+            placeholderText.gameObject.SetActive(true);
     }
 
     public void SendMessageChat()
@@ -44,20 +104,38 @@ public class ChatSystem : NetworkBehaviour
         if (string.IsNullOrWhiteSpace(message)) return;
 
         var id = Runner.LocalPlayer.PlayerId;
-        var text = $"Player {id}: {message}";
+        var formattedMessage = $"Player {id}: {message}";
 
-        RpcChat(text);
+        // Gửi RPC
+        RpcChat(formattedMessage);
 
+        // Reset input
         inputFieldMessage.text = "";
-        inputFieldMessage.ActivateInputField();
+        inputFieldMessage.DeactivateInputField();
+
+        if (PlayerMovement.Local != null)
+            PlayerMovement.Local.allowControl = true;
+
+        if (placeholderText != null)
+            placeholderText.gameObject.SetActive(true);
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]
     public void RpcChat(string message)
     {
-        if (textMessage != null)
-            textMessage.text += message + "\n";
+        // Thêm tin nhắn mới vào danh sách
+        chatLines.Add(message);
 
+        // Giới hạn tối đa 8 tin nhắn
+        if (chatLines.Count > MAX_CHAT_LINES)
+        {
+            chatLines.RemoveAt(0);
+        }
+
+        // Cập nhật lại TextMeshPro
+        UpdateChatDisplay();
+
+        // Hiển thị panel và bắt đầu fade
         if (panelMessageImage != null)
         {
             Color c = panelMessageImage.color;
@@ -71,6 +149,15 @@ public class ChatSystem : NetworkBehaviour
         }
     }
 
+    /// Cập nhật nội dung hiển thị của textMessage từ danh sách chatLines
+
+    private void UpdateChatDisplay()
+    {
+        if (textMessage == null) return;
+
+        textMessage.text = string.Join("\n", chatLines);
+    }
+
     IEnumerator FadeOutPanel()
     {
         yield return new WaitForSeconds(fadeDelay);
@@ -81,14 +168,20 @@ public class ChatSystem : NetworkBehaviour
         while (time < fadeDuration)
         {
             time += Time.deltaTime;
-
             float alpha = Mathf.Lerp(originalAlpha, 0f, time / fadeDuration);
-
             panelMessageImage.color = new Color(c.r, c.g, c.b, alpha);
-
             yield return null;
         }
 
         panelMessageImage.color = new Color(c.r, c.g, c.b, 0f);
+    }
+
+    private void OnDestroy()
+    {
+        if (toggleChatAction != null)
+        {
+            toggleChatAction.Disable();
+            toggleChatAction.Dispose();
+        }
     }
 }

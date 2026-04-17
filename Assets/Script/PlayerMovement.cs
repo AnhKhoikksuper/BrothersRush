@@ -9,6 +9,8 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private GameObject explosionPrefab;
     [SerializeField] private AudioClip explosionSound;
     [SerializeField] private AudioSource audioSource;
+    [Header("Control")]
+    public bool allowControl = true;   // ← Thêm dòng này
     [Header("Components")]
     [SerializeField] private CharacterController character;
     [SerializeField] private Animator animator;
@@ -37,7 +39,12 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Ground Detection")]
     [SerializeField] private LayerMask groundLayer;
+    [Header("Footstep Sounds")]
+    [SerializeField] private AudioClip[] walkFootstepClips;     // Mảng âm thanh đi bộ (có thể nhiều clip để random)
+    [SerializeField] private AudioClip[] sprintFootstepClips;   // Mảng âm thanh chạy (có thể nhiều clip)
 
+    [SerializeField] private float walkStepInterval = 0.45f;    // Thời gian giữa 2 bước khi đi bộ
+    [SerializeField] private float sprintStepInterval = 0.25f;  // Thời gian giữa 2 bước khi chạy (nhanh hơn)
     private Vector2 moveInput;
     private bool isSprinting;
     private bool jumpRequested;
@@ -56,6 +63,8 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] public bool HasDoubleJumped { get; set; }
     [Networked] public bool HasUnlockedDoubleJump { get; set; }
     [Networked] private bool TriggerDoubleJump { get; set; }
+    // Biến private để quản lý timing
+    private float footstepTimer = 0f;
     // NetworkTransform (không [Networked])
     private NetworkTransform networkTransform;
 
@@ -138,29 +147,33 @@ public class PlayerMovement : NetworkBehaviour
     {
         Respawn();
     }
-
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority || IsLocked) return;
+        if (!HasInputAuthority || IsLocked || !allowControl) return;   // ← Sửa thành dòng này
 
         if (HasInputAuthority)
         {
-            Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+            // === FOOTSTEP SOUND - Phân biệt Walk & Sprint ===
+            bool isMoving = moveInput.magnitude > 0.1f && character.isGrounded;
 
-            // 🎵 FOOTSTEP
-            if (move.magnitude > 0.1f && character.isGrounded)
+            if (isMoving)
             {
-                if (!footstepAudio.isPlaying)
+                float currentInterval = isSprinting ? sprintStepInterval : walkStepInterval;
+                float currentSpeedFactor = isSprinting ? 1.2f : 1f; // Có thể điều chỉnh để chạy nghe "nặng" hơn
+
+                footstepTimer += Runner.DeltaTime * currentSpeedFactor;
+
+                if (footstepTimer >= currentInterval)
                 {
-                    footstepAudio.Play();
+                    PlayFootstepSound(isSprinting);
+                    footstepTimer = 0f;        // Reset timer
                 }
             }
             else
             {
+                footstepTimer = 0f;            // Không di chuyển thì reset timer
                 if (footstepAudio.isPlaying)
-                {
                     footstepAudio.Stop();
-                }
             }
         }
 
@@ -209,7 +222,22 @@ public class PlayerMovement : NetworkBehaviour
             UIManager.Instance.ShowRespawn();
         }
     }
+    private void PlayFootstepSound(bool isSprinting)
+    {
+        AudioClip[] clips = isSprinting ? sprintFootstepClips : walkFootstepClips;
 
+        if (clips == null || clips.Length == 0 || footstepAudio == null)
+            return;
+
+        // Random chọn 1 clip trong mảng
+        AudioClip clipToPlay = clips[Random.Range(0, clips.Length)];
+
+        // PlayOneShot để không bị cắt ngang nếu có sound khác
+        footstepAudio.PlayOneShot(clipToPlay);
+
+        // Tùy chọn: thay đổi pitch ngẫu nhiên một chút để nghe tự nhiên hơn
+        footstepAudio.pitch = Random.Range(0.92f, 1.08f);
+    }
 
     private void HandleGravityAndJumping(Vector3 targetDirection)
     {
@@ -317,13 +345,23 @@ public class PlayerMovement : NetworkBehaviour
     }
 
     // === INPUT CALLBACKS ===
-    public void OnMove(InputValue value) => moveInput = value.Get<Vector2>();
-    public void OnSprint(InputValue value) => isSprinting = value.isPressed;
+    public void OnMove(InputValue value)
+    {
+        if (!allowControl) return;         
+        moveInput = value.Get<Vector2>();
+    }
+    public void OnSprint(InputValue value)
+    {
+        if (!allowControl) return;        
+        isSprinting = value.isPressed;
+        isSprinting = value.isPressed;
+    }
 
     // === INPUT CALLBACKS ===
     // === CẬP NHẬT QUAN TRỌNG NHẤT TRONG ONJUMP ===
     public void OnJump(InputValue value)
     {
+        if (!allowControl) return;          
         if (value.isPressed)
         {
             // 1. Nếu đang đứng trên đất -> Nhảy bình thường
