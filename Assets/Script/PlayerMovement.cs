@@ -149,7 +149,7 @@ public class PlayerMovement : NetworkBehaviour
     }
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority || IsLocked || !allowControl) return;   // ← Sửa thành dòng này
+        if (!HasInputAuthority || IsLocked) return;
 
         if (HasInputAuthority)
         {
@@ -219,7 +219,7 @@ public class PlayerMovement : NetworkBehaviour
 
         if (transform.position.y < -5f)
         {
-            UIManager.Instance.ShowRespawn();
+           UIGamePlayManager.Instance.ShowRespawn();
         }
     }
     private void PlayFootstepSound(bool isSprinting)
@@ -346,8 +346,8 @@ public class PlayerMovement : NetworkBehaviour
 
     // === INPUT CALLBACKS ===
     public void OnMove(InputValue value)
-    {
-        if (!allowControl) return;         
+    {         
+        if (!allowControl) return;  
         moveInput = value.Get<Vector2>();
     }
     public void OnSprint(InputValue value)
@@ -360,8 +360,8 @@ public class PlayerMovement : NetworkBehaviour
     // === INPUT CALLBACKS ===
     // === CẬP NHẬT QUAN TRỌNG NHẤT TRONG ONJUMP ===
     public void OnJump(InputValue value)
-    {
-        if (!allowControl) return;          
+    {          
+        if (!allowControl) return;  
         if (value.isPressed)
         {
             // 1. Nếu đang đứng trên đất -> Nhảy bình thường
@@ -384,7 +384,7 @@ public class PlayerMovement : NetworkBehaviour
         if (value.isPressed)
         {
             RPC_Respawn();
-            UIManager.Instance?.HideRespawn();
+           UIGamePlayManager.Instance?.HideRespawn();
         }
     }
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
@@ -429,7 +429,7 @@ public class PlayerMovement : NetworkBehaviour
         // UI
         if (HasInputAuthority)
         {
-            UIManager.Instance.ShowRespawn();
+           UIGamePlayManager.Instance.ShowRespawn();
         }
 
         Debug.Log("Nổ!");

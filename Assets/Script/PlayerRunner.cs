@@ -1,31 +1,47 @@
-using UnityEngine;
 using Fusion;
+using UnityEngine;
 
-public class PlayerRunner : SimulationBehaviour, IPlayerJoined
+public class PlayerRunner : SimulationBehaviour
 {
-    [SerializeField] private GameObject playerPrefab;
-    
+    public static PlayerRunner Instance;
+
+    [Header("Skin Prefabs")]
+    [SerializeField] private GameObject[] playerSkinPrefabs;
+
     [Header("Spawn Settings")]
-    [Tooltip("Độ cao cố định khi nhân vật xuất hiện")]
-    [SerializeField] private float spawnHeightY = 10f; 
-    
+    [SerializeField] private float spawnHeightY = 10f;
     [SerializeField] private float minRange = -2f;
     [SerializeField] private float maxRange = 10f;
 
-    public void PlayerJoined(PlayerRef player)
+    private void Awake()
     {
-        // Kiểm tra nếu là người chơi cục bộ (Local Player)
-        if (player == Runner.LocalPlayer)
-        {
-            // Tạo vị trí ngẫu nhiên trên mặt phẳng XZ, nhưng giữ nguyên độ cao Y theo biến đã set
-            Vector3 spawnPosition = new Vector3(
-                Random.Range(minRange, maxRange), 
-                spawnHeightY, 
-                Random.Range(minRange, maxRange)
-            );
+        Instance = this;
+    }
 
-            // Spawn nhân vật với quyền Input Authority cho người chơi
-            Runner.Spawn(playerPrefab, spawnPosition, Quaternion.identity, player);
+    public void SpawnSelectedPlayer(int skinIndex, string playerName)
+    {
+        if (skinIndex < 0 || skinIndex >= playerSkinPrefabs.Length)
+        {
+            Debug.LogError("Skin index không hợp lệ!");
+            return;
         }
+
+        Vector3 spawnPosition = new Vector3(
+            Random.Range(minRange, maxRange),
+            spawnHeightY,
+            Random.Range(minRange, maxRange)
+        );
+
+        GameObject prefabToSpawn = playerSkinPrefabs[skinIndex];
+
+        Runner.Spawn(prefabToSpawn, spawnPosition, Quaternion.identity, Runner.LocalPlayer,
+(runner, obj) =>
+{
+    var data = obj.GetComponent<PlayerData>();
+    if (data != null)
+    {
+        data.SetName(playerName);
+    }
+});
     }
 }

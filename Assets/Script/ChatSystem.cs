@@ -12,7 +12,8 @@ public class ChatSystem : NetworkBehaviour
     public TMP_InputField inputFieldMessage;
     public Button buttonSend;
     public Image panelMessageImage;
-
+    public TMP_Text chatDisplay; // Khung hiển thị text chat
+    public TMP_InputField chatInput; // Ô nhập tin nhắn
     public float fadeDelay = 2f;
     public float fadeDuration = 1f;
 
@@ -103,13 +104,17 @@ public class ChatSystem : NetworkBehaviour
 
         if (string.IsNullOrWhiteSpace(message)) return;
 
-        var id = Runner.LocalPlayer.PlayerId;
-        var formattedMessage = $"Player {id}: {message}";
+        string senderName = "Player";
 
-        // Gửi RPC
+        if (PlayerData.Local != null)
+        {
+            senderName = PlayerData.Local.PlayerName.ToString();
+        }
+
+        var formattedMessage = $"<b>{senderName}:</b> {message}";
+
         RpcChat(formattedMessage);
 
-        // Reset input
         inputFieldMessage.text = "";
         inputFieldMessage.DeactivateInputField();
 

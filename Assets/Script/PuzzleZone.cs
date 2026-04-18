@@ -16,7 +16,7 @@ public class PuzzleZone : NetworkBehaviour
             player.RPC_Lock(true);
 
             // 🔥 truyền chính nó vào UI
-            UIManager.Instance.ShowPuzzle(this);
+           UIGamePlayManager.Instance.ShowPuzzle(this);
         }
     }
 
@@ -28,7 +28,7 @@ public class PuzzleZone : NetworkBehaviour
         // 🔥 mở Double Jump lần đầu
         player.RPC_EnableDoubleJump();
 
-        UIManager.Instance.HidePuzzle();
+       UIGamePlayManager.Instance.HidePuzzle();
     }
 
     // ❌ trả lời sai
@@ -37,7 +37,7 @@ public class PuzzleZone : NetworkBehaviour
         player.RPC_Lock(false);
         player.RPC_Respawn();
 
-        UIManager.Instance.HidePuzzle();
+       UIGamePlayManager.Instance.HidePuzzle();
     }
     public void ChooseA(PlayerMovement player)
     {

@@ -6,7 +6,7 @@ public class ChestTrigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            UIManager.Instance.ShowChestUI();
+           UIGamePlayManager.Instance.ShowChestUI();
         }
     }
 
@@ -14,7 +14,7 @@ public class ChestTrigger : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            UIManager.Instance.HideChestUI();
+           UIGamePlayManager.Instance.HideChestUI();
         }
     }
 }

@@ -2,9 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-public class UIManager : MonoBehaviour
+public class UIGamePlayManager : MonoBehaviour
 {
-    public static UIManager Instance;
+    public static UIGamePlayManager Instance;
     [Header("Ready UI")]
     public GameObject readyPanel;
     public TextMeshProUGUI readyText;
