@@ -9,9 +9,14 @@ public class PlayerRunner : SimulationBehaviour
     [SerializeField] private GameObject[] playerSkinPrefabs;
 
     [Header("Spawn Settings")]
-    [SerializeField] private float spawnHeightY = 10f;
-    [SerializeField] private float minRange = -2f;
-    [SerializeField] private float maxRange = 10f;
+    [SerializeField] private Transform spawnCenter; // 🔥 Object trung tâm
+    [SerializeField] private float spawnRadius = 5f; // bán kính spawn
+
+    [SerializeField] private float spawnHeightY = 1f;
+
+    [Header("Collision Settings")]
+    [SerializeField] private float minDistanceBetweenPlayers = 1.5f;
+    [SerializeField] private LayerMask playerLayer;
 
     private void Awake()
     {
@@ -26,22 +31,51 @@ public class PlayerRunner : SimulationBehaviour
             return;
         }
 
-        Vector3 spawnPosition = new Vector3(
-            Random.Range(minRange, maxRange),
-            spawnHeightY,
-            Random.Range(minRange, maxRange)
-        );
+        Vector3 spawnPosition = GetValidSpawnPosition();
 
         GameObject prefabToSpawn = playerSkinPrefabs[skinIndex];
 
         Runner.Spawn(prefabToSpawn, spawnPosition, Quaternion.identity, Runner.LocalPlayer,
-(runner, obj) =>
-{
-    var data = obj.GetComponent<PlayerData>();
-    if (data != null)
-    {
-        data.SetName(playerName);
+        (runner, obj) =>
+        {
+            var data = obj.GetComponent<PlayerData>();
+            if (data != null)
+            {
+                data.SetName(playerName);
+            }
+        });
     }
-});
+
+    // 🔥 TÌM VỊ TRÍ KHÔNG BỊ CHỒNG
+    private Vector3 GetValidSpawnPosition()
+    {
+        int maxAttempts = 20;
+
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            Vector2 randomCircle = Random.insideUnitCircle * spawnRadius;
+
+            Vector3 candidate = new Vector3(
+                spawnCenter.position.x + randomCircle.x,
+                spawnHeightY,
+                spawnCenter.position.z + randomCircle.y
+            );
+
+            // 🔥 Check có player nào gần không
+            bool isOccupied = Physics.CheckSphere(
+                candidate,
+                minDistanceBetweenPlayers,
+                playerLayer
+            );
+
+            if (!isOccupied)
+            {
+                return candidate;
+            }
+        }
+
+        // ❗ fallback nếu tìm không được
+        Debug.LogWarning("Không tìm được vị trí trống, spawn tạm!");
+        return spawnCenter.position + Vector3.up * spawnHeightY;
     }
 }

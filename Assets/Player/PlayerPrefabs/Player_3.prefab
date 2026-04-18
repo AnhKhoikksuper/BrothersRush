@@ -1779,8 +1779,7 @@ GameObject:
   - component: {fileID: 2341519055887115585}
   - component: {fileID: 8068842090353317999}
   - component: {fileID: 2731589971989428426}
-  - component: {fileID: 6736266446149731524}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Player_3
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -2248,7 +2247,6 @@ MonoBehaviour:
     _length: 0
     _data:
       Data: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  nameText: {fileID: 6010468444097174537}
 --- !u!114 &2731589971989428426
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2263,20 +2261,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   worldSpaceCanvas: {fileID: 456027867796757289}
   nameText: {fileID: 6010468444097174537}
---- !u!114 &6736266446149731524
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8640792609053818574}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 1541381998, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Guid:
-    RawGuidValue: f3e1bb1d439ca82418a5452514473a30
 --- !u!1 &8921184776388295092
 GameObject:
   m_ObjectHideFlags: 0

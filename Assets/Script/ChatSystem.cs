@@ -16,7 +16,7 @@ public class ChatSystem : NetworkBehaviour
     public TMP_InputField chatInput; // Ô nhập tin nhắn
     public float fadeDelay = 2f;
     public float fadeDuration = 1f;
-
+    private bool allowFocusFromHotkey = false;
     private float originalAlpha;
     private Coroutine fadeCoroutine;
 
@@ -36,7 +36,7 @@ public class ChatSystem : NetworkBehaviour
         inputFieldMessage = GameObject.Find("InputFieldMessage")?.GetComponent<TMP_InputField>();
         buttonSend = GameObject.Find("ButtonSend")?.GetComponent<Button>();
         panelMessageImage = GameObject.Find("Panel Message")?.GetComponent<Image>();
-        placeholderText = GameObject.Find("Placeholder")?.GetComponent<TextMeshProUGUI>();
+        placeholderText = GameObject.Find("PlaceholderChat")?.GetComponent<TextMeshProUGUI>();
 
         if (textMessage == null || inputFieldMessage == null || buttonSend == null || panelMessageImage == null)
         {
@@ -50,7 +50,11 @@ public class ChatSystem : NetworkBehaviour
         inputFieldMessage.onSelect.AddListener(OnChatFocus);
         inputFieldMessage.onDeselect.AddListener(OnChatUnfocus);
         buttonSend.onClick.AddListener(SendMessageChat);
-        inputFieldMessage.onSubmit.AddListener(delegate { SendMessageChat(); });
+        inputFieldMessage.onSubmit.AddListener((_) =>
+        {
+            if (inputFieldMessage.isFocused)
+            SendMessageChat();
+        });
 
         // === PHÍM C NHANH ===
         toggleChatAction = new InputAction("ToggleChat", InputActionType.Button, "<Keyboard>/c");
@@ -65,16 +69,13 @@ public class ChatSystem : NetworkBehaviour
     {
         if (inputFieldMessage == null) return;
 
-        if (!inputFieldMessage.isFocused)
-        {
-            inputFieldMessage.ActivateInputField();
-            if (placeholderText != null)
-                placeholderText.gameObject.SetActive(false);
-        }
-        else
-        {
-            inputFieldMessage.MoveTextEnd(false);
-        }
+        // 🔥 Đánh dấu là do phím C
+        allowFocusFromHotkey = true;
+
+        inputFieldMessage.ActivateInputField();
+
+        if (placeholderText != null)
+            placeholderText.gameObject.SetActive(false);
 
         if (PlayerMovement.Local != null)
             PlayerMovement.Local.allowControl = false;
@@ -82,6 +83,16 @@ public class ChatSystem : NetworkBehaviour
 
     private void OnChatFocus(string text)
     {
+        // ❌ Nếu không phải do nhấn C → hủy focus ngay
+        if (!allowFocusFromHotkey)
+        {
+            inputFieldMessage.DeactivateInputField();
+            return;
+        }
+
+        // 🔥 Reset lại flag
+        allowFocusFromHotkey = false;
+
         if (PlayerMovement.Local != null)
             PlayerMovement.Local.allowControl = false;
 

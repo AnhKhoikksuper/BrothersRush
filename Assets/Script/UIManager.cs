@@ -20,6 +20,8 @@ public class UIGamePlayManager : MonoBehaviour
     public TextMeshProUGUI questionText;
     public TextMeshProUGUI answerAText;
     public TextMeshProUGUI answerBText;
+    [Header("Panel Skin Selection UI")]
+    public GameObject panelSkinSelection;
 
     [Header("Chest UI")]
     public GameObject chestPanel;
@@ -34,6 +36,10 @@ public class UIGamePlayManager : MonoBehaviour
 
     private void Awake()
     {
+        if(panelSkinSelection != null)
+        {
+            panelSkinSelection.SetActive(true);
+        }
         // Singleton pattern
         if (Instance != null && Instance != this)
         {
