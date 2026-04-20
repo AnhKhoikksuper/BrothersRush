@@ -1697,6 +1697,7 @@ MonoBehaviour:
   _VerticalVelocity: 0
   _NetworkedSpeed: 0
   _IsGroundedNetworked: 0
+  airDistanceThreshold: 0.7
   _IsInMidAirAnim: 0
   _CheckpointPos: {x: 0, y: 0, z: 0}
   _CurrentDistToGround: 0
