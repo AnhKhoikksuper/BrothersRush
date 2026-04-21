@@ -13,7 +13,6 @@ public class SkinSelectionUI : MonoBehaviour
     [SerializeField] private Button[] skinButtons;
 
     private SkinButtonUI[] skinButtonUIs;
-
     private int selectedSkinIndex = -1;
 
     private void Start()
@@ -30,17 +29,14 @@ public class SkinSelectionUI : MonoBehaviour
 
         confirmButton.onClick.AddListener(OnConfirmClicked);
 
-        // 🔥 CHỌN SẴN ELEMENT 0
         SelectSkin(0);
     }
 
     public void SelectSkin(int index)
     {
-        // ❗ Nếu bấm lại nút đang chọn → bỏ qua
         if (selectedSkinIndex == index) return;
 
         selectedSkinIndex = index;
-
         UpdateSelectionUI();
 
         Debug.Log("Chọn skin: " + index);
