@@ -67,7 +67,7 @@ public class PlayerMovement : NetworkBehaviour
     private float footstepTimer = 0f;
     // NetworkTransform (không [Networked])
     private NetworkTransform networkTransform;
-
+    private TomatoPlayer tomatoPlayer;
     public override void Spawned()
     {
         networkTransform = GetComponent<NetworkTransform>();
@@ -77,6 +77,7 @@ public class PlayerMovement : NetworkBehaviour
             Local = this;
             TryAssignCamera();
             HasUnlockedDoubleJump = false;
+            tomatoPlayer = GetComponent<TomatoPlayer>();
             ThirdPersonCamera camScript = FindFirstObjectByType<ThirdPersonCamera>();
             if (camScript != null)
             {
@@ -93,7 +94,16 @@ public class PlayerMovement : NetworkBehaviour
         CheckpointPos = pos;
         Debug.Log("Đã lưu checkpoint: " + pos);
     }
+    public void OnFire(InputValue value)
+    {
+        if (!HasInputAuthority || !allowControl) return;
+        if (IsLocked) return;
 
+        if (value.isPressed)
+        {
+            tomatoPlayer?.OnShoot();
+        }
+    }
     public void Respawn()
     {
         if (!HasStateAuthority) return;
@@ -147,6 +157,7 @@ public class PlayerMovement : NetworkBehaviour
     {
         Respawn();
     }
+
     public override void FixedUpdateNetwork()
     {
         if (!HasInputAuthority || IsLocked) return;
@@ -219,7 +230,7 @@ public class PlayerMovement : NetworkBehaviour
 
         if (transform.position.y < -5f)
         {
-           UIGamePlayManager.Instance.ShowRespawn();
+            UIGamePlayManager.Instance.ShowRespawn();
         }
     }
     private void PlayFootstepSound(bool isSprinting)
@@ -346,13 +357,13 @@ public class PlayerMovement : NetworkBehaviour
 
     // === INPUT CALLBACKS ===
     public void OnMove(InputValue value)
-    {         
-        if (!allowControl) return;  
+    {
+        if (!allowControl) return;
         moveInput = value.Get<Vector2>();
     }
     public void OnSprint(InputValue value)
     {
-        if (!allowControl) return;        
+        if (!allowControl) return;
         isSprinting = value.isPressed;
         isSprinting = value.isPressed;
     }
@@ -360,8 +371,8 @@ public class PlayerMovement : NetworkBehaviour
     // === INPUT CALLBACKS ===
     // === CẬP NHẬT QUAN TRỌNG NHẤT TRONG ONJUMP ===
     public void OnJump(InputValue value)
-    {          
-        if (!allowControl) return;  
+    {
+        if (!allowControl) return;
         if (value.isPressed)
         {
             // 1. Nếu đang đứng trên đất -> Nhảy bình thường
@@ -384,7 +395,7 @@ public class PlayerMovement : NetworkBehaviour
         if (value.isPressed)
         {
             RPC_Respawn();
-           UIGamePlayManager.Instance?.HideRespawn();
+            UIGamePlayManager.Instance?.HideRespawn();
         }
     }
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
@@ -429,7 +440,7 @@ public class PlayerMovement : NetworkBehaviour
         // UI
         if (HasInputAuthority)
         {
-           UIGamePlayManager.Instance.ShowRespawn();
+            UIGamePlayManager.Instance.ShowRespawn();
         }
 
         Debug.Log("Nổ!");
