@@ -1491,6 +1491,7 @@ GameObject:
   - component: {fileID: 5700272377805329255}
   - component: {fileID: 7522322841839758128}
   - component: {fileID: 2114812606232412155}
+  - component: {fileID: 3735480985057530855}
   m_Layer: 8
   m_Name: Player_4
   m_TagString: Player
@@ -1589,6 +1590,7 @@ MonoBehaviour:
   - {fileID: 6475414030449831255}
   - {fileID: 7522322841839758128}
   - {fileID: 2114812606232412155}
+  - {fileID: 3735480985057530855}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &569837711274013690
 MonoBehaviour:
@@ -1697,7 +1699,6 @@ MonoBehaviour:
   _VerticalVelocity: 0
   _NetworkedSpeed: 0
   _IsGroundedNetworked: 0
-  airDistanceThreshold: 0.7
   _IsInMidAirAnim: 0
   _CheckpointPos: {x: 0, y: 0, z: 0}
   _CurrentDistToGround: 0
@@ -1974,6 +1975,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   worldSpaceCanvas: {fileID: 169082237611969964}
   nameText: {fileID: 8505872216008506725}
+--- !u!114 &3735480985057530855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7665119685551747397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe920d86b242be54497deb700ee6c214, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _TomatoCount: 0
+  tomatoProjectilePrefab: {fileID: 1200679957420021548, guid: 647b4b18ce5f556449430c06bda37cd5, type: 3}
+  shootPoint: {fileID: 943437767119605542, guid: d53bf9b3b3c64f441932378778940e78, type: 3}
+  tomatoText: {fileID: 0}
+  splatterImage: {fileID: 0}
 --- !u!1 &7866915523759488575
 GameObject:
   m_ObjectHideFlags: 0

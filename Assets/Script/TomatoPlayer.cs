@@ -1,6 +1,7 @@
 using Fusion;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class TomatoPlayer : NetworkBehaviour
 {
@@ -10,8 +11,8 @@ public class TomatoPlayer : NetworkBehaviour
     [SerializeField] private GameObject tomatoProjectilePrefab;
     [SerializeField] private Transform shootPoint;
 
-    private TMP_Text tomatoText;
-    private CanvasGroup splatterPanel;
+    public TMP_Text tomatoText;
+    public Image splatterImage;
 
     private bool isFading;
 
@@ -24,16 +25,18 @@ public class TomatoPlayer : NetworkBehaviour
         }
     }
 
-    // 🔥 TỰ TÌM UI TRONG SCENE
+    // 🔥 TỰ TÌM UI
     private void FindUI()
     {
         tomatoText = GameObject.Find("TomatoText")?.GetComponent<TMP_Text>();
-        splatterPanel = GameObject.Find("SplatterPanel")?.GetComponent<CanvasGroup>();
+        splatterImage = GameObject.Find("SplatterImage")?.GetComponent<Image>();
 
-        if (splatterPanel != null)
+        if (splatterImage != null)
         {
-            splatterPanel.alpha = 0;
-            splatterPanel.gameObject.SetActive(false);
+            Color c = splatterImage.color;
+            c.a = 0;
+            splatterImage.color = c;
+            splatterImage.gameObject.SetActive(false);
         }
     }
 
@@ -101,10 +104,13 @@ public class TomatoPlayer : NetworkBehaviour
     private void ShowSplatter()
     {
         if (!HasInputAuthority) return;
-        if (splatterPanel == null) return;
+        if (splatterImage == null) return;
 
-        splatterPanel.gameObject.SetActive(true);
-        splatterPanel.alpha = 1;
+        splatterImage.gameObject.SetActive(true);
+
+        Color c = splatterImage.color;
+        c.a = 1;
+        splatterImage.color = c;
 
         if (!isFading)
             StartCoroutine(FadeOut());
@@ -114,14 +120,19 @@ public class TomatoPlayer : NetworkBehaviour
     {
         isFading = true;
 
-        while (splatterPanel.alpha > 0)
+        Color c = splatterImage.color;
+
+        while (c.a > 0)
         {
-            splatterPanel.alpha -= Time.deltaTime * 1.5f;
+            c.a -= Time.deltaTime * 1.5f;
+            splatterImage.color = c;
             yield return null;
         }
 
-        splatterPanel.alpha = 0;
-        splatterPanel.gameObject.SetActive(false);
+        c.a = 0;
+        splatterImage.color = c;
+
+        splatterImage.gameObject.SetActive(false);
 
         isFading = false;
     }

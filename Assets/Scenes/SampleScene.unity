@@ -21707,7 +21707,7 @@ MonoBehaviour:
   minDistanceBetweenPlayers: 1.5
   playerLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
 --- !u!114 &283892834
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -101893,13 +101893,14 @@ GameObject:
   - component: {fileID: 1261414745}
   - component: {fileID: 1261414747}
   - component: {fileID: 1261414746}
+  - component: {fileID: 1261414748}
   m_Layer: 5
-  m_Name: SplatterPanel
+  m_Name: SplatterImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1261414745
 RectTransform:
   m_ObjectHideFlags: 0
@@ -101957,6 +101958,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1261414744}
   m_CullTransparentMesh: 1
+--- !u!225 &1261414748
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1261414744}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1262522492 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1865319424299759460, guid: 55c6ac4b5afd32041a168acb964874c0, type: 3}
