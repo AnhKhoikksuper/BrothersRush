@@ -7,13 +7,12 @@ public class TomatoPickup : NetworkBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!HasStateAuthority) return;
 
         TomatoPlayer player = other.GetComponent<TomatoPlayer>();
 
         if (player != null)
         {
-            player.AddTomato(1);
+            player.AddTomato(amount);
             Runner.Despawn(Object);
         }
     }

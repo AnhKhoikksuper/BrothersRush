@@ -46,6 +46,7 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private float walkStepInterval = 0.45f;    // Thời gian giữa 2 bước khi đi bộ
     [SerializeField] private float sprintStepInterval = 0.25f;  // Thời gian giữa 2 bước khi chạy (nhanh hơn)
     private Vector2 moveInput;
+    private NetworkButtons previousButtons;
     private bool isSprinting;
     private bool jumpRequested;
     private Transform mainCameraTransform;
@@ -160,44 +161,78 @@ public class PlayerMovement : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority || IsLocked) return;
-
-        if (HasInputAuthority)
+        if (!allowControl)
         {
-            // === FOOTSTEP SOUND - Phân biệt Walk & Sprint ===
-            bool isMoving = moveInput.magnitude > 0.1f && character.isGrounded;
+            CurrentHorizontalVelocity = Vector3.zero;
+            return;
+        }
+        if (!GetInput<PlayerInputData>(out var input))
+            return;
 
-            if (isMoving)
+        if (!HasInputAuthority || IsLocked)
+            return;
+
+        // 🔥 LẤY BUTTON NHẤN 1 LẦN (QUAN TRỌNG NHẤT)
+        var pressed = input.buttons.GetPressed(previousButtons);
+
+        // 🔥 MOVE INPUT
+        moveInput = input.move;
+
+        // 🔥 SPRINT (SYNC QUA NETWORK)
+        isSprinting = input.buttons.IsSet(1); // BUTTON_SPRINT
+
+        // 🔥 JUMP (FIX CHÍNH Ở ĐÂY)
+        if (pressed.IsSet(0)) // BUTTON_JUMP
+        {
+            if (character.isGrounded)
             {
-                float currentInterval = isSprinting ? sprintStepInterval : walkStepInterval;
-                float currentSpeedFactor = isSprinting ? 1.2f : 1f; // Có thể điều chỉnh để chạy nghe "nặng" hơn
-
-                footstepTimer += Runner.DeltaTime * currentSpeedFactor;
-
-                if (footstepTimer >= currentInterval)
-                {
-                    PlayFootstepSound(isSprinting);
-                    footstepTimer = 0f;        // Reset timer
-                }
+                jumpRequested = true;
             }
-            else
+            else if (HasUnlockedDoubleJump && !HasDoubleJumped)
             {
-                footstepTimer = 0f;            // Không di chuyển thì reset timer
-                if (footstepAudio.isPlaying)
-                    footstepAudio.Stop();
+                Debug.Log("Double Jump (Network)");
+                jumpRequested = true;
             }
         }
 
+        previousButtons = input.buttons;
+
+        // =============================
+        // FOOTSTEP SOUND
+        // =============================
+        bool isMoving = moveInput.magnitude > 0.1f && character.isGrounded;
+
+        if (isMoving)
+        {
+            float currentInterval = isSprinting ? sprintStepInterval : walkStepInterval;
+            float currentSpeedFactor = isSprinting ? 1.2f : 1f;
+
+            footstepTimer += Runner.DeltaTime * currentSpeedFactor;
+
+            if (footstepTimer >= currentInterval)
+            {
+                PlayFootstepSound(isSprinting);
+                footstepTimer = 0f;
+            }
+        }
+        else
+        {
+            footstepTimer = 0f;
+            if (footstepAudio.isPlaying)
+                footstepAudio.Stop();
+        }
+
+        // =============================
+        // MOVEMENT
+        // =============================
         Vector3 moveDirection = CalculateMoveDirection();
 
-        // Tính tốc độ mục tiêu
         float targetSpeed = (moveInput != Vector2.zero)
             ? (isSprinting ? sprintSpeed : moveSpeed)
             : 0f;
 
         Vector3 targetVelocity = moveDirection * targetSpeed;
 
-        // Xử lý quán tính
         float lerpFactor = (targetSpeed > 0) ? acceleration : deceleration;
         if (!character.isGrounded) lerpFactor *= airControl;
 
@@ -207,27 +242,35 @@ public class PlayerMovement : NetworkBehaviour
             Runner.DeltaTime * lerpFactor
         );
 
-        // Gravity + Jump
+        // =============================
+        // GRAVITY + JUMP
+        // =============================
         HandleGravityAndJumping(moveDirection);
 
-        // Di chuyển
         Vector3 finalVelocity = CurrentHorizontalVelocity;
         finalVelocity.y = VerticalVelocity;
 
         character.Move(finalVelocity * Runner.DeltaTime);
 
-        // Xoay nhân vật
+        // =============================
+        // ROTATION
+        // =============================
         if (moveDirection != Vector3.zero)
         {
             Quaternion targetRot = Quaternion.LookRotation(moveDirection);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Runner.DeltaTime * rotationSpeed);
         }
 
-        // Update animation (dựa vào input, không phải vận tốc thực)
+        // =============================
+        // ANIMATION
+        // =============================
         NetworkedSpeed = (moveInput == Vector2.zero) ? 0f : (isSprinting ? 1f : 0.5f);
 
         IsGroundedNetworked = character.isGrounded && !IsInMidAirAnim;
 
+        // =============================
+        // FALL CHECK
+        // =============================
         if (transform.position.y < -5f)
         {
             UIGamePlayManager.Instance.ShowRespawn();
@@ -369,25 +412,7 @@ public class PlayerMovement : NetworkBehaviour
     }
 
     // === INPUT CALLBACKS ===
-    // === CẬP NHẬT QUAN TRỌNG NHẤT TRONG ONJUMP ===
-    public void OnJump(InputValue value)
-    {
-        if (!allowControl) return;
-        if (value.isPressed)
-        {
-            // 1. Nếu đang đứng trên đất -> Nhảy bình thường
-            if (character.isGrounded)
-            {
-                jumpRequested = true;
-            }
-            // 2. Nếu đang ở trên không -> Chỉ cho nhảy nếu AllowDoubleJump là true VÀ chưa nhảy lần 2
-            else if (HasUnlockedDoubleJump && !HasDoubleJumped)
-            {
-                Debug.Log("Double Jump On Jump");
-                jumpRequested = true;
-            }
-        }
-    }
+
 
     public void OnRespawn(InputValue value)
     {

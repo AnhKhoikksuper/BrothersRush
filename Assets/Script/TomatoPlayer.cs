@@ -45,7 +45,7 @@ public class TomatoPlayer : NetworkBehaviour
     // =====================
     public void AddTomato(int amount)
     {
-        if (!HasStateAuthority) return;
+        if (!Object.HasStateAuthority) return;
 
         TomatoCount += amount;
         RPC_UpdateUI(TomatoCount);
@@ -69,7 +69,6 @@ public class TomatoPlayer : NetworkBehaviour
     // =====================
     public void OnShoot()
     {
-        if (!HasInputAuthority) return;
         if (TomatoCount <= 0) return;
 
         RPC_Shoot();
@@ -122,9 +121,12 @@ public class TomatoPlayer : NetworkBehaviour
 
         Color c = splatterImage.color;
 
+        // 🔥 GIỮ NGUYÊN 1.5s TRƯỚC KHI MỜ
+        yield return new WaitForSeconds(1.5f);
+
         while (c.a > 0)
         {
-            c.a -= Time.deltaTime * 1.5f;
+            c.a -= Time.deltaTime * 0.8f;
             splatterImage.color = c;
             yield return null;
         }

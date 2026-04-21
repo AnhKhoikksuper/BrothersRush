@@ -12,9 +12,6 @@ public class Checkpoint : NetworkBehaviour
             Vector3 safePos = transform.position + Vector3.up * 10f; // 🔥 nâng lên
 
             player.SetCheckpoint(safePos);
-
-            Debug.Log("Checkpoint saved: " + safePos);
-            Debug.Log("đã save");
         }
     }
 }

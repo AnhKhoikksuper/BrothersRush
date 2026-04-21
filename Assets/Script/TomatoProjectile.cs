@@ -10,30 +10,39 @@ public class TomatoProjectile : NetworkBehaviour
 
     public override void Spawned()
     {
-        lifeTimer = TickTimer.CreateFromSeconds(Runner, lifeTime);
+        if (Object.HasStateAuthority)
+        {
+            lifeTimer = TickTimer.CreateFromSeconds(Runner, lifeTime);
+        }
     }
 
     public override void FixedUpdateNetwork()
     {
+        // 🔥 CHỈ STATE AUTHORITY CHẠY LOGIC
+        if (!Object.HasStateAuthority)
+            return;
+
         transform.position += transform.forward * speed * Runner.DeltaTime;
 
         if (lifeTimer.Expired(Runner))
         {
             Runner.Despawn(Object);
+            return;
         }
-    }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (!HasStateAuthority) return;
+        // 🔥 CHECK HIT (CHỈ SERVER)
+        var hits = Physics.OverlapSphere(transform.position, 0.3f);
 
-        TomatoPlayer player = other.GetComponent<TomatoPlayer>();
-
-        if (player != null)
+        foreach (var hit in hits)
         {
-            player.RPC_Hit();
-        }
+            var player = hit.GetComponent<TomatoPlayer>();
 
-        Runner.Despawn(Object);
+            if (player != null && player.Object.InputAuthority != Object.InputAuthority)
+            {
+                player.RPC_Hit();
+                Runner.Despawn(Object);
+                break;
+            }
+        }
     }
 }

@@ -5,18 +5,22 @@ using TMPro;
 
 public class MusicUI : MonoBehaviour
 {
-    public GameObject panel;
+    public GameObject musicPanel;
     public Transform content; // nơi chứa button
     public GameObject buttonPrefab;
 
     private bool isOpen = false;
-
+    void Start()
+    {
+        musicPanel.SetActive(false);
+        source = GetComponent<AudioSource>();
+    }
     void Update()
     {
         if (Keyboard.current.bKey.wasPressedThisFrame)
         {
             isOpen = !isOpen;
-            panel.SetActive(isOpen);
+            musicPanel.SetActive(isOpen);
 
             if (isOpen)
             {
@@ -54,32 +58,29 @@ public class MusicUI : MonoBehaviour
         }
     }
 
-AudioClip currentClip;
-AudioSource source;
+    AudioClip currentClip;
+    AudioSource source;
 
-void Start()
-{
-    source = GetComponent<AudioSource>();
-}
+    
 
-void PlayMusic(AudioClip clip)
-{
-    // 🔥 nếu đang phát đúng bài → TẮT
-    if (source.isPlaying && currentClip == clip)
+    void PlayMusic(AudioClip clip)
     {
-        source.Stop();
-        currentClip = null;
+        // 🔥 nếu đang phát đúng bài → TẮT
+        if (source.isPlaying && currentClip == clip)
+        {
+            source.Stop();
+            currentClip = null;
 
-        AudioManager.Instance.PlayBGM();
-        return;
+            AudioManager.Instance.PlayBGM();
+            return;
+        }
+
+        // 🔥 nếu đang phát bài khác → đổi bài
+        currentClip = clip;
+
+        AudioManager.Instance.StopBGM();
+
+        source.clip = clip;
+        source.Play();
     }
-
-    // 🔥 nếu đang phát bài khác → đổi bài
-    currentClip = clip;
-
-    AudioManager.Instance.StopBGM();
-
-    source.clip = clip;
-    source.Play();
-}
 }

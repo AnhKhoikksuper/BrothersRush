@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-
 public class UIGamePlayManager : MonoBehaviour
 {
     public static UIGamePlayManager Instance;
@@ -15,11 +14,14 @@ public class UIGamePlayManager : MonoBehaviour
     bool lastGameState = false;
     int lastCountdown = -1;
     [Header("Respawn UI")]
+    private float holdRTime = 0f;
+    private bool isHoldingR = false;
     public GameObject respawnPanel;
     public GameObject puzzlePanel;
     public TextMeshProUGUI questionText;
     public TextMeshProUGUI answerAText;
     public TextMeshProUGUI answerBText;
+
     [Header("Panel Skin Selection UI")]
     public GameObject panelSkinSelection;
 
@@ -36,7 +38,7 @@ public class UIGamePlayManager : MonoBehaviour
 
     private void Awake()
     {
-        if(panelSkinSelection != null)
+        if (panelSkinSelection != null)
         {
             panelSkinSelection.SetActive(true);
         }
@@ -67,10 +69,14 @@ public class UIGamePlayManager : MonoBehaviour
         {
             endGamePanel.SetActive(false);
         }
+        // Hiện chuột để người chơi có thể click nút
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
     }
 
     void Update()
     {
+
         if (GameManager.Instance == null || !GameManager.Instance.Object || !GameManager.Instance.Object.IsValid)
             return;
 
@@ -119,7 +125,9 @@ public class UIGamePlayManager : MonoBehaviour
                 ShowReady();
             }
         }
+        HandleHoldRespawn();
     }
+
     public void ShowReady()
     {
         // 🔥 Chưa bắt đầu → hiện lại panel (trường hợp reset game)
@@ -140,27 +148,58 @@ public class UIGamePlayManager : MonoBehaviour
     /// </summary>
     public void ShowRespawn()
     {
-        if (respawnPanel != null)
+        if (respawnPanel != null && !respawnPanel.activeSelf)
         {
             respawnPanel.SetActive(true);
         }
 
-        // Hiện chuột để người chơi có thể click nút
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
     }
+    private void HandleHoldRespawn()
+    {
+        // ❌ Không cho hold khi chưa spawn player
+        if (PlayerMovement.Local == null)
+            return;
 
+        // =========================
+        // NHẤN GIỮ R
+        // =========================
+        if (Input.GetKey(KeyCode.R))
+        {
+            isHoldingR = true;
+            holdRTime += Time.deltaTime;
+
+            // 🔥 đủ 1.5s thì show panel
+            if (holdRTime >= 0.8f)
+            {
+                ShowRespawn();
+            }
+        }
+        else
+        {
+            // =========================
+            // THẢ R → RESET
+            // =========================
+            if (isHoldingR)
+            {
+                HideRespawn();
+            }
+
+            isHoldingR = false;
+            holdRTime = 0f;
+        }
+    }
     /// <summary>
     /// Ẩn panel Respawn và khóa chuột lại
     /// </summary>
     public void HideRespawn()
     {
-        if (respawnPanel != null)
+        if (respawnPanel != null && respawnPanel.activeSelf)
         {
             respawnPanel.SetActive(false);
         }
 
-        // Khóa chuột lại (trở về chế độ chơi bình thường)
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
     }
@@ -195,7 +234,11 @@ public class UIGamePlayManager : MonoBehaviour
     {
         if (GameManager.Instance != null && GameManager.Instance.Object != null && GameManager.Instance.Object.IsValid)
         {
-            GameManager.Instance.RPC_SetReady(GameManager.Instance.Runner.LocalPlayer); // ✅ FIX
+            GameManager.Instance.RPC_SetReady();
+
+            // 🔥 Disable button sau khi bấm
+            if (readyButton != null)
+                readyButton.SetActive(false);
         }
         else
         {

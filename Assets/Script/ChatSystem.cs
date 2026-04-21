@@ -12,14 +12,12 @@ public class ChatSystem : NetworkBehaviour
     public TMP_InputField inputFieldMessage;
     public Button buttonSend;
     public Image panelMessageImage;
-    public TMP_Text chatDisplay; // Khung hiển thị text chat
-    public TMP_InputField chatInput; // Ô nhập tin nhắn
     public float fadeDelay = 2f;
     public float fadeDuration = 1f;
     private bool allowFocusFromHotkey = false;
     private float originalAlpha;
     private Coroutine fadeCoroutine;
-
+    private bool isChatting = false;
     private InputAction toggleChatAction;
 
     // Placeholder
@@ -53,7 +51,7 @@ public class ChatSystem : NetworkBehaviour
         inputFieldMessage.onSubmit.AddListener((_) =>
         {
             if (inputFieldMessage.isFocused)
-            SendMessageChat();
+                SendMessageChat();
         });
 
         // === PHÍM C NHANH ===
@@ -61,40 +59,38 @@ public class ChatSystem : NetworkBehaviour
         toggleChatAction.performed += ctx => FocusChatInput();
         toggleChatAction.Enable();
     }
+    void Update()
+    {
+        // ❌ Nếu không phải đang chat mà InputField tự bị focus → hủy ngay
+        if (!isChatting && inputFieldMessage != null && inputFieldMessage.isFocused)
+        {
+            inputFieldMessage.DeactivateInputField();
+
+            UnityEngine.EventSystems.EventSystem.current
+                .SetSelectedGameObject(null);
+        }
+    }
 
     /// <summary>
     /// Luôn focus vào InputField khi nhấn C
     /// </summary>
-    private void FocusChatInput()
-    {
-        if (inputFieldMessage == null) return;
-
-        // 🔥 Đánh dấu là do phím C
-        allowFocusFromHotkey = true;
-
-        inputFieldMessage.ActivateInputField();
-
-        if (placeholderText != null)
-            placeholderText.gameObject.SetActive(false);
-
-        if (PlayerMovement.Local != null)
-            PlayerMovement.Local.allowControl = false;
-    }
-
     private void OnChatFocus(string text)
     {
-        // ❌ Nếu không phải do nhấn C → hủy focus ngay
         if (!allowFocusFromHotkey)
         {
             inputFieldMessage.DeactivateInputField();
+
+            // 🔥 FIX QUAN TRỌNG
+            UnityEngine.EventSystems.EventSystem.current
+                .SetSelectedGameObject(null);
+
             return;
         }
 
-        // 🔥 Reset lại flag
         allowFocusFromHotkey = false;
+        isChatting = true;
 
-        if (PlayerMovement.Local != null)
-            PlayerMovement.Local.allowControl = false;
+        LockPlayer(true);
 
         if (placeholderText != null)
             placeholderText.gameObject.SetActive(false);
@@ -102,13 +98,30 @@ public class ChatSystem : NetworkBehaviour
 
     private void OnChatUnfocus(string text)
     {
-        if (PlayerMovement.Local != null)
-            PlayerMovement.Local.allowControl = true;
+        isChatting = false;
+
+        LockPlayer(false);
 
         if (placeholderText != null && string.IsNullOrEmpty(inputFieldMessage.text))
             placeholderText.gameObject.SetActive(true);
     }
+    private void FocusChatInput()
+    {
+        if (inputFieldMessage == null) return;
 
+        // 🔥 Tránh spam C
+        if (isChatting) return;
+
+        allowFocusFromHotkey = true;
+        isChatting = true;
+
+        inputFieldMessage.ActivateInputField();
+
+        if (placeholderText != null)
+            placeholderText.gameObject.SetActive(false);
+
+        LockPlayer(true);
+    }
     public void SendMessageChat()
     {
         var message = inputFieldMessage.text;
@@ -129,11 +142,37 @@ public class ChatSystem : NetworkBehaviour
         inputFieldMessage.text = "";
         inputFieldMessage.DeactivateInputField();
 
-        if (PlayerMovement.Local != null)
-            PlayerMovement.Local.allowControl = true;
+        isChatting = false;
+        LockPlayer(false);
 
         if (placeholderText != null)
             placeholderText.gameObject.SetActive(true);
+    }
+    private void LockPlayer(bool lockState)
+    {
+        if (PlayerMovement.Local != null)
+        {
+            PlayerMovement.Local.allowControl = !lockState;
+
+            // 🔥 RESET velocity để không bị trôi
+            if (lockState)
+            {
+                PlayerMovement.Local.CurrentHorizontalVelocity = Vector3.zero;
+                PlayerMovement.Local.VerticalVelocity = 0f;
+            }
+        }
+
+        // Cursor
+        if (lockState)
+        {
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+        else
+        {
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
+        }
     }
 
     [Rpc(RpcSources.All, RpcTargets.All)]

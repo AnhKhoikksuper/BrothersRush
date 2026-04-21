@@ -469,7 +469,6 @@ GameObject:
   - component: {fileID: 3876914745584631793}
   - component: {fileID: 5945983070700048919}
   - component: {fileID: 6381474808483108176}
-  - component: {fileID: 8622454571824283854}
   m_Layer: 8
   m_Name: Player_1
   m_TagString: Player
@@ -486,7 +485,7 @@ Transform:
   m_GameObject: {fileID: 2549607856010289610}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.2, y: -0, z: -2.1516106}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -569,7 +568,6 @@ MonoBehaviour:
   - {fileID: 2478152733252343907}
   - {fileID: 5945983070700048919}
   - {fileID: 6381474808483108176}
-  - {fileID: 8622454571824283854}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &996446419700345946
 MonoBehaviour:
@@ -712,8 +710,6 @@ MonoBehaviour:
   inputFieldMessage: {fileID: 0}
   buttonSend: {fileID: 0}
   panelMessageImage: {fileID: 0}
-  chatDisplay: {fileID: 0}
-  chatInput: {fileID: 0}
   fadeDelay: 2
   fadeDuration: 1
   placeholderText: {fileID: 0}
@@ -954,21 +950,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   worldSpaceCanvas: {fileID: 4434910515169490472}
   nameText: {fileID: 5159810970453991324}
---- !u!114 &8622454571824283854
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2549607856010289610}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe920d86b242be54497deb700ee6c214, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _TomatoCount: 0
-  tomatoProjectilePrefab: {fileID: 1200679957420021548, guid: 647b4b18ce5f556449430c06bda37cd5, type: 3}
-  shootPoint: {fileID: 943437767119605542}
 --- !u!1 &3377299097709916672
 GameObject:
   m_ObjectHideFlags: 0
@@ -1003,8 +984,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.00000005959, y: -0.1447}
-  m_SizeDelta: {x: 2.079, y: 0.6114}
+  m_AnchoredPosition: {x: -0.00000005959, y: -0.000000055879}
+  m_SizeDelta: {x: 2.079, y: 0.403}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6992419711558844861
 CanvasRenderer:
@@ -1061,8 +1042,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 0.46
-  m_fontSizeBase: 0.46
+  m_fontSize: 0.27
+  m_fontSizeBase: 0.27
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1366,8 +1347,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: -0.04, y: 2.73}
-  m_SizeDelta: {x: 2.079, y: 0.9008}
+  m_AnchoredPosition: {x: -0.04, y: 2.4811}
+  m_SizeDelta: {x: 2.079, y: 0.403}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &8767056569940643243
 Canvas:
