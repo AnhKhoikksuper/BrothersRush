@@ -9,9 +9,8 @@ public class PlayerRunner : SimulationBehaviour
     [SerializeField] private GameObject[] playerSkinPrefabs;
 
     [Header("Spawn Settings")]
-    [SerializeField] private Transform spawnCenter; // 🔥 Object trung tâm
-    [SerializeField] private float spawnRadius = 5f; // bán kính spawn
-
+    [SerializeField] private Transform spawnCenter;
+    [SerializeField] private float spawnRadius = 5f;
     [SerializeField] private float spawnHeightY = 1f;
 
     [Header("Collision Settings")]
@@ -32,7 +31,6 @@ public class PlayerRunner : SimulationBehaviour
         }
 
         Vector3 spawnPosition = GetValidSpawnPosition();
-
         GameObject prefabToSpawn = playerSkinPrefabs[skinIndex];
 
         Runner.Spawn(prefabToSpawn, spawnPosition, Quaternion.identity, Runner.LocalPlayer,
@@ -46,7 +44,6 @@ public class PlayerRunner : SimulationBehaviour
         });
     }
 
-    // 🔥 TÌM VỊ TRÍ KHÔNG BỊ CHỒNG
     private Vector3 GetValidSpawnPosition()
     {
         int maxAttempts = 20;
@@ -61,7 +58,6 @@ public class PlayerRunner : SimulationBehaviour
                 spawnCenter.position.z + randomCircle.y
             );
 
-            // 🔥 Check có player nào gần không
             bool isOccupied = Physics.CheckSphere(
                 candidate,
                 minDistanceBetweenPlayers,
@@ -74,7 +70,6 @@ public class PlayerRunner : SimulationBehaviour
             }
         }
 
-        // ❗ fallback nếu tìm không được
         Debug.LogWarning("Không tìm được vị trí trống, spawn tạm!");
         return spawnCenter.position + Vector3.up * spawnHeightY;
     }
